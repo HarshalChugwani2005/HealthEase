@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Users, BarChart3, Zap, Shield, TrendingUp } from 'lucide-react';
-import Button from '../components/ui/Button';
+import { Button } from '../components/ui/Button';
 
 const LandingPage = () => {
     return (

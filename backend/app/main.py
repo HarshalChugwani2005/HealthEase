@@ -78,24 +78,32 @@ app.include_router(admin.router, prefix="/api")
 
 
 # Error handlers
+from fastapi.responses import JSONResponse
+
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
     """Custom 404 handler"""
-    return {
-        "error": "Not Found",
-        "message": "The requested resource was not found",
-        "path": str(request.url)
-    }
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Not Found",
+            "message": "The requested resource was not found",
+            "path": str(request.url)
+        }
+    )
 
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
     """Custom 500 handler"""
     logger.error(f"Internal server error: {exc}")
-    return {
-        "error": "Internal Server Error",
-        "message": "An unexpected error occurred. Please try again later."
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Please try again later."
+        }
+    )
 
 
 if __name__ == "__main__":

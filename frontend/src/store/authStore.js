@@ -15,7 +15,7 @@ export const useAuthStore = create(
             login: async (email, password) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await api.post('/auth/login', { email, password });
+                    const response = await api.post('/api/auth/login', { email, password });
                     const { user, access_token } = response.data;
 
                     // Store token in localStorage
@@ -30,7 +30,17 @@ export const useAuthStore = create(
 
                     return { success: true, role: user.role };
                 } catch (error) {
-                    const errorMessage = error.response?.data?.detail || 'Login failed';
+                    let errorMessage = 'Login failed';
+                    if (error.response?.data?.detail) {
+                        const detail = error.response.data.detail;
+                        if (Array.isArray(detail)) {
+                            errorMessage = detail.map(err => err.msg || err).join(', ');
+                        } else if (typeof detail === 'object') {
+                            errorMessage = JSON.stringify(detail);
+                        } else {
+                            errorMessage = detail;
+                        }
+                    }
                     set({ error: errorMessage, isLoading: false });
                     return { success: false, error: errorMessage };
                 }
@@ -40,7 +50,7 @@ export const useAuthStore = create(
             register: async (email, password, role, profile_data) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await api.post('/auth/register', {
+                    const response = await api.post('/api/auth/register', {
                         email,
                         password,
                         role,
@@ -59,7 +69,17 @@ export const useAuthStore = create(
 
                     return { success: true, role: user.role };
                 } catch (error) {
-                    const errorMessage = error.response?.data?.detail || 'Registration failed';
+                    let errorMessage = 'Registration failed';
+                    if (error.response?.data?.detail) {
+                        const detail = error.response.data.detail;
+                        if (Array.isArray(detail)) {
+                            errorMessage = detail.map(err => err.msg || err).join(', ');
+                        } else if (typeof detail === 'object') {
+                            errorMessage = JSON.stringify(detail);
+                        } else {
+                            errorMessage = detail;
+                        }
+                    }
                     set({ error: errorMessage, isLoading: false });
                     return { success: false, error: errorMessage };
                 }
@@ -86,7 +106,7 @@ export const useAuthStore = create(
                 }
 
                 try {
-                    const response = await api.get('/auth/me');
+                    const response = await api.get('/api/auth/me');
                     set({
                         user: response.data,
                         token,

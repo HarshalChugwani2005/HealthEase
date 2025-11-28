@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # HealthEase - Agentic AI Hospital Management Platform
 
 A complete, production-grade hospital management and patient flow platform powered by AI, featuring real-time surge predictions, smart referrals, digital wallets, and workflow automation.
@@ -277,7 +276,3 @@ For issues or questions, contact: [your-email@example.com]
 ---
 
 **HealthEase** - Transforming Healthcare with AI 🏥✨
-=======
-# HealthEase
-Predictive Hospital Management System
->>>>>>> 7e8cc166bb8cda28d25e8e11d2ab5543d55473a1

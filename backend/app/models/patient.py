@@ -17,11 +17,11 @@ class Patient(Document):
     user_id: ObjectId = Field(index=True)
     full_name: str
     phone: str = Field(index=True)
-    date_of_birth: date
+    date_of_birth: Optional[date] = None
     blood_group: Optional[str] = None
-    address: str
-    city: str
-    state: str
+    address: str = ""
+    city: str = ""
+    state: str = ""
     medical_history: List[dict] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

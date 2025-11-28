@@ -12,7 +12,13 @@ const Register = () => {
         password: '',
         full_name: '',
         role: 'patient', // Default role
-        phone_number: ''
+        phone_number: '',
+        // Hospital specific fields
+        hospital_name: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: ''
     });
 
     const handleChange = (e) => {
@@ -21,13 +27,30 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const { email, password, role, full_name, phone_number } = formData;
-            const profile_data = { full_name, phone: phone_number };
-            await register(email, password, role, profile_data);
+        const { email, password, role, full_name, phone_number, hospital_name, address, city, state, pincode } = formData;
+        
+        let profile_data = {};
+        if (role === 'patient') {
+            profile_data = { 
+                full_name, 
+                phone: phone_number 
+            };
+        } else if (role === 'hospital') {
+            profile_data = {
+                name: hospital_name,
+                phone: phone_number,
+                address,
+                city,
+                state,
+                pincode,
+                location: { type: "Point", coordinates: [0, 0] }, // Default location
+                specializations: []
+            };
+        }
+        
+        const result = await register(email, password, role, profile_data);
+        if (result.success) {
             navigate('/login');
-        } catch (err) {
-            // Error handled by store
         }
     };
 
@@ -46,21 +69,112 @@ const Register = () => {
                     </p>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="rounded-md shadow-sm -space-y-px">
-                        <div className="mb-4">
-                            <label htmlFor="full_name" className="sr-only">Full Name</label>
-                            <input
-                                id="full_name"
-                                name="full_name"
-                                type="text"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                placeholder="Full Name"
-                                value={formData.full_name}
+                    <div className="rounded-md shadow-sm space-y-4">
+                        <div>
+                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                                Register as
+                            </label>
+                            <select
+                                id="role"
+                                name="role"
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                value={formData.role}
                                 onChange={handleChange}
-                            />
+                            >
+                                <option value="patient">Patient</option>
+                                <option value="hospital">Hospital</option>
+                            </select>
                         </div>
-                        <div className="mb-4">
+
+                        {formData.role === 'patient' ? (
+                            <>
+                                <div>
+                                    <label htmlFor="full_name" className="sr-only">Full Name</label>
+                                    <input
+                                        id="full_name"
+                                        name="full_name"
+                                        type="text"
+                                        required
+                                        className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        placeholder="Full Name"
+                                        value={formData.full_name}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div>
+                                    <label htmlFor="hospital_name" className="sr-only">Hospital Name</label>
+                                    <input
+                                        id="hospital_name"
+                                        name="hospital_name"
+                                        type="text"
+                                        required
+                                        className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        placeholder="Hospital Name"
+                                        value={formData.hospital_name}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="address" className="sr-only">Address</label>
+                                    <input
+                                        id="address"
+                                        name="address"
+                                        type="text"
+                                        required
+                                        className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        placeholder="Address"
+                                        value={formData.address}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="city" className="sr-only">City</label>
+                                        <input
+                                            id="city"
+                                            name="city"
+                                            type="text"
+                                            required
+                                            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                            placeholder="City"
+                                            value={formData.city}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="state" className="sr-only">State</label>
+                                        <input
+                                            id="state"
+                                            name="state"
+                                            type="text"
+                                            required
+                                            className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                            placeholder="State"
+                                            value={formData.state}
+                                            onChange={handleChange}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="pincode" className="sr-only">Pincode</label>
+                                    <input
+                                        id="pincode"
+                                        name="pincode"
+                                        type="text"
+                                        required
+                                        className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        placeholder="Pincode"
+                                        value={formData.pincode}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div>
                             <label htmlFor="email-address" className="sr-only">Email address</label>
                             <input
                                 id="email-address"
@@ -68,26 +182,26 @@ const Register = () => {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="Email address"
                                 value={formData.email}
                                 onChange={handleChange}
                             />
                         </div>
-                        <div className="mb-4">
+                        <div>
                             <label htmlFor="phone_number" className="sr-only">Phone Number</label>
                             <input
                                 id="phone_number"
                                 name="phone_number"
                                 type="tel"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 placeholder="Phone Number"
                                 value={formData.phone_number}
                                 onChange={handleChange}
                             />
                         </div>
-                        <div className="mb-4">
+                        <div>
                             <label htmlFor="password" className="sr-only">Password</label>
                             <input
                                 id="password"
@@ -95,24 +209,11 @@ const Register = () => {
                                 type="password"
                                 autoComplete="new-password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                placeholder="Password"
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Password (min 8 chars, uppercase, lowercase, digit)"
                                 value={formData.password}
                                 onChange={handleChange}
                             />
-                        </div>
-                        <div className="mb-4">
-                            <label htmlFor="role" className="sr-only">Role</label>
-                            <select
-                                id="role"
-                                name="role"
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                value={formData.role}
-                                onChange={handleChange}
-                            >
-                                <option value="patient">Patient</option>
-                                <option value="hospital">Hospital</option>
-                            </select>
                         </div>
                     </div>
 
