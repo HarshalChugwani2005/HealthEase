@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-white text-gray-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+
+  /* Custom scrollbar */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Card shadows */
+  .card-shadow {
+    @apply shadow-lg shadow-gray-200/50;
+  }
+
+  /* Animations */
+  @keyframes slideInUp {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  /* Gradient backgrounds */
+  .gradient-hospital {
+    background: linear-gradient(135deg, #1C6DD0 0%, #00B8A9 100%);
+  }
+
+  .gradient-patient {
+    background: linear-gradient(135deg, #6C63FF 0%, #48CAE4 100%);
+  }
+
+  .gradient-admin {
+    background: linear-gradient(135deg, #14213D 0%, #FCA311 100%);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

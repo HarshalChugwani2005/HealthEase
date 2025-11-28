@@ -1,0 +1,44 @@
+{
+    "name": "Payment Processing Workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "payment-webhook",
+                "options": {}
+            },
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "return { status: 'processed', amount: items[0].json.body.amount };"
+            },
+            "name": "Process Payment",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Process Payment",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
