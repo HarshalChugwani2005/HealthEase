@@ -9,7 +9,7 @@ passlib[bcrypt]
 python-multipart
 pymongo
 razorpay
-openai
+google-generativeai
 httpx
 python-dotenv
 email-validator

@@ -259,6 +259,24 @@ async def get_surge_predictions(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/me/health-forecast")
+async def get_my_health_forecast(
+    current_user: User = Depends(get_hospital_user)
+):
+    """
+    Get 7-day health forecast for the current user's hospital
+    """
+    try:
+        hospital = await Hospital.find_one(Hospital.user_id == current_user.id)
+        if not hospital:
+            raise HTTPException(status_code=404, detail="Hospital profile not found")
+            
+        return await ai_service.get_health_forecast(hospital.city)
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/{hospital_id}/inventory")
 async def get_inventory(
     hospital_id: str,

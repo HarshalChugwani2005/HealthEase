@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { ChatBot } from './components/ui/ChatBot';
+import { Layout } from './components/ui/Layout';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -40,7 +41,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/" replace />;
     }
 
-    return children;
+    return (
+        <Layout>
+            {children}
+        </Layout>
+    );
 };
 
 function App() {

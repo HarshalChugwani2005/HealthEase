@@ -15,19 +15,22 @@ const Login = () => {
         password: '',
         role: 'patient',
     });
-    const [serverOnline, setServerOnline] = useState(true);
+    const [serverError, setServerError] = useState(null);
 
     useEffect(() => {
         // Quick health check to inform user if backend is down
         (async () => {
             try {
                 await api.get('/health');
-                setServerOnline(true);
-            } catch {
-                setServerOnline(false);
+                setServerError(null);
+            } catch (err) {
+                console.error("Health check failed:", err);
+                setServerError(err.message || "Backend unreachable");
             }
         })();
     }, []);
+
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -54,9 +57,10 @@ const Login = () => {
                 </div>
 
                 {/* Backend Offline Banner */}
-                {!serverOnline && (
+                {/* Backend Offline Banner */}
+                {serverError && (
                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm flex items-center gap-2">
-                        <WifiOff className="h-4 w-4" /> Backend unreachable. Check server on http://localhost:8000
+                        <WifiOff className="h-4 w-4" /> {serverError}. Check server on http://localhost:8000
                     </div>
                 )}
 

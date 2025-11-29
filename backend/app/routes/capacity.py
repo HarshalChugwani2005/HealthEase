@@ -79,9 +79,12 @@ async def update_capacity(
         await hospital.save()
         
         # Log capacity change
+        # Log capacity change
         capacity_log = CapacityLog(
             hospital_id=hospital_id,
-            capacity=hospital.capacity,
+            beds_occupied=hospital.capacity['total_beds'] - hospital.capacity['available_beds'],
+            icu_occupied=hospital.capacity['icu_beds'] - hospital.capacity['available_icu_beds'],
+            ventilators_occupied=hospital.capacity['ventilators'] - hospital.capacity['available_ventilators'],
             timestamp=datetime.utcnow()
         )
         await capacity_log.insert()
@@ -165,12 +168,14 @@ async def get_capacity_logs(
             CapacityLog.timestamp >= start_date
         ).sort("-timestamp").to_list()
         
+        # Get current hospital capacity for totals (approximation for historical data)
+        hospital = await Hospital.get(hospital_id)
+        current_total_beds = hospital.capacity.get('total_beds', 1)
+        
         # Calculate statistics
         occupancy_rates = []
         for log in logs:
-            total = log.capacity.get('total_beds', 1)
-            available = log.capacity.get('available_beds', 0)
-            occupancy = ((total - available) / total * 100) if total > 0 else 0
+            occupancy = (log.beds_occupied / current_total_beds * 100) if current_total_beds > 0 else 0
             occupancy_rates.append(occupancy)
         
         avg_occupancy = sum(occupancy_rates) / len(occupancy_rates) if occupancy_rates else 0
@@ -182,10 +187,11 @@ async def get_capacity_logs(
             "logs": [
                 {
                     "timestamp": log.timestamp.isoformat(),
-                    "capacity": log.capacity,
+                    "beds_occupied": log.beds_occupied,
+                    "icu_occupied": log.icu_occupied,
+                    "ventilators_occupied": log.ventilators_occupied,
                     "occupancy_percentage": round(
-                        ((log.capacity.get('total_beds', 1) - log.capacity.get('available_beds', 0)) / 
-                         log.capacity.get('total_beds', 1) * 100) if log.capacity.get('total_beds', 1) > 0 else 0,
+                        (log.beds_occupied / current_total_beds * 100) if current_total_beds > 0 else 0,
                         2
                     )
                 }
@@ -261,9 +267,12 @@ async def quick_capacity_update(
         await hospital.save()
         
         # Log change
+        # Log change
         capacity_log = CapacityLog(
             hospital_id=hospital_id,
-            capacity=hospital.capacity,
+            beds_occupied=hospital.capacity['total_beds'] - hospital.capacity['available_beds'],
+            icu_occupied=hospital.capacity['icu_beds'] - hospital.capacity['available_icu_beds'],
+            ventilators_occupied=hospital.capacity['ventilators'] - hospital.capacity['available_ventilators'],
             timestamp=datetime.utcnow()
         )
         await capacity_log.insert()

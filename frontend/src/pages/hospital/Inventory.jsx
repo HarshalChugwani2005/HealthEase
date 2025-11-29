@@ -9,10 +9,11 @@ const Inventory = () => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [loading, setLoading] = useState(true);
     const [newItem, setNewItem] = useState({
-        name: '',
-        category: 'medicines',
-        quantity: 0,
-        minimum_quantity: 0,
+        item_name: '',
+        category: 'medicine',
+        current_stock: 0,
+        reorder_threshold: 0,
+        unit_price: 0,
         unit: 'units'
     });
 
@@ -45,12 +46,14 @@ const Inventory = () => {
         e.preventDefault();
         try {
             await api.post('/api/inventory/add', newItem);
-            setNewItem({ name: '', category: 'medicines', quantity: 0, minimum_quantity: 0, unit: 'units' });
+            setNewItem({ item_name: '', category: 'medicine', current_stock: 0, reorder_threshold: 0, unit_price: 0, unit: 'units' });
             setShowAddForm(false);
             fetchInventory();
             fetchAlerts();
         } catch (err) {
-            alert(err.response?.data?.detail || 'Error adding item');
+            console.error('Add item error:', err);
+            const errorMessage = err.response?.data?.detail || err.message || 'Error adding item';
+            alert(typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage);
         }
     };
 
@@ -77,9 +80,9 @@ const Inventory = () => {
 
     const getCategoryColor = (category) => {
         const colors = {
-            medicines: 'bg-blue-100 text-blue-800',
+            medicine: 'bg-blue-100 text-blue-800',
             equipment: 'bg-purple-100 text-purple-800',
-            supplies: 'bg-green-100 text-green-800',
+            consumable: 'bg-green-100 text-green-800',
             ppe: 'bg-yellow-100 text-yellow-800',
             blood: 'bg-red-100 text-red-800'
         };
@@ -110,7 +113,7 @@ const Inventory = () => {
                     <div className="space-y-1">
                         {alerts.map((alert, idx) => (
                             <p key={idx} className="text-sm text-red-700">
-                                • {alert.name}: {alert.quantity} {alert.unit} (minimum: {alert.minimum_quantity})
+                                • {alert.item_name}: {alert.current_stock} {alert.unit} (minimum: {alert.reorder_threshold})
                             </p>
                         ))}
                     </div>
@@ -126,8 +129,8 @@ const Inventory = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
                                 <input
                                     type="text"
-                                    value={newItem.name}
-                                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                                    value={newItem.item_name}
+                                    onChange={(e) => setNewItem({ ...newItem, item_name: e.target.value })}
                                     className="w-full rounded-md border-gray-300"
                                     required
                                 />
@@ -137,23 +140,21 @@ const Inventory = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                                 <select
                                     value={newItem.category}
-                                    onChange={(e) => setNewItem({...newItem, category: e.target.value})}
+                                    onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                                     className="w-full rounded-md border-gray-300"
                                 >
-                                    <option value="medicines">Medicines</option>
+                                    <option value="medicine">Medicine</option>
                                     <option value="equipment">Equipment</option>
-                                    <option value="supplies">Supplies</option>
-                                    <option value="ppe">PPE</option>
-                                    <option value="blood">Blood</option>
+                                    <option value="consumable">Consumable</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
                                 <input
                                     type="number"
-                                    value={newItem.quantity}
-                                    onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 0})}
+                                    value={newItem.current_stock}
+                                    onChange={(e) => setNewItem({ ...newItem, current_stock: parseInt(e.target.value) || 0 })}
                                     className="w-full rounded-md border-gray-300"
                                     min="0"
                                     required
@@ -161,11 +162,11 @@ const Inventory = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Quantity</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Threshold</label>
                                 <input
                                     type="number"
-                                    value={newItem.minimum_quantity}
-                                    onChange={(e) => setNewItem({...newItem, minimum_quantity: parseInt(e.target.value) || 0})}
+                                    value={newItem.reorder_threshold}
+                                    onChange={(e) => setNewItem({ ...newItem, reorder_threshold: parseInt(e.target.value) || 0 })}
                                     className="w-full rounded-md border-gray-300"
                                     min="0"
                                     required
@@ -177,7 +178,7 @@ const Inventory = () => {
                                 <input
                                     type="text"
                                     value={newItem.unit}
-                                    onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
+                                    onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
                                     className="w-full rounded-md border-gray-300"
                                     placeholder="e.g., units, boxes, liters"
                                     required
@@ -192,7 +193,7 @@ const Inventory = () => {
 
             <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Inventory Items ({items.length})</h2>
-                
+
                 {items.length === 0 ? (
                     <p className="text-gray-500 text-center py-8">No items in inventory. Add your first item above.</p>
                 ) : (
@@ -212,7 +213,7 @@ const Inventory = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {items.map((item) => (
                                     <tr key={item.id}>
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.item_name}</td>
                                         <td className="px-4 py-3">
                                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(item.category)}`}>
                                                 {item.category}
@@ -220,39 +221,38 @@ const Inventory = () => {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <Button 
-                                                    variant="outline" 
+                                                <Button
+                                                    variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                                                    disabled={item.quantity <= 0}
+                                                    onClick={() => handleUpdateQuantity(item.id, item.current_stock - 1)}
+                                                    disabled={item.current_stock <= 0}
                                                 >
                                                     -
                                                 </Button>
-                                                <span className="text-sm font-semibold w-12 text-center">{item.quantity}</span>
-                                                <Button 
-                                                    variant="outline" 
+                                                <span className="text-sm font-semibold w-12 text-center">{item.current_stock}</span>
+                                                <Button
+                                                    variant="outline"
                                                     size="sm"
-                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                                    onClick={() => handleUpdateQuantity(item.id, item.current_stock + 1)}
                                                 >
                                                     +
                                                 </Button>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{item.minimum_quantity}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{item.reorder_threshold}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{item.unit || 'units'}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                item.quantity <= item.minimum_quantity ? 'bg-red-100 text-red-800' :
-                                                item.quantity <= item.minimum_quantity * 2 ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-green-100 text-green-800'
-                                            }`}>
-                                                {item.quantity <= item.minimum_quantity ? 'Low' :
-                                                 item.quantity <= item.minimum_quantity * 2 ? 'Medium' : 'Good'}
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.current_stock <= item.reorder_threshold ? 'bg-red-100 text-red-800' :
+                                                item.current_stock <= item.reorder_threshold * 2 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-green-100 text-green-800'
+                                                }`}>
+                                                {item.current_stock <= item.reorder_threshold ? 'Low' :
+                                                    item.current_stock <= item.reorder_threshold * 2 ? 'Medium' : 'Good'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <Button 
-                                                variant="outline" 
+                                            <Button
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={() => handleDeleteItem(item.id)}
                                                 className="text-red-600 hover:bg-red-50"

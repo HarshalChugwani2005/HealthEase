@@ -4,6 +4,33 @@ import { Button } from '../../components/ui/Button';
 import { ReviewModal } from '../../components/ui/ReviewModal';
 import AppointmentBooking from '../../components/ui/AppointmentBooking';
 import api from '../../lib/api';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix Leaflet icon issue
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Component to update map center
+const MapUpdater = ({ center }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (center) {
+            map.setView(center, 13);
+        }
+    }, [center, map]);
+    return null;
+};
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -33,7 +60,7 @@ const HospitalSearch = () => {
             getLocation();
         }
     }, []);
-    
+
     useEffect(() => {
         // Auto-search when GPS coordinates are obtained
         if (useGPS && searchParams.latitude && searchParams.longitude && !loading) {
@@ -44,7 +71,7 @@ const HospitalSearch = () => {
     const getLocation = async () => {
         setLoading(true);
         setError('');
-        
+
         // First try: HTML5 Geolocation API (requires HTTPS)
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -58,12 +85,12 @@ const HospitalSearch = () => {
                     setLoading(false);
                     // Auto-search after getting location
                     setTimeout(() => {
-                        handleSearch({ preventDefault: () => {} });
+                        handleSearch({ preventDefault: () => { } });
                     }, 500);
                 },
                 async (error) => {
                     console.error("Browser geolocation error:", error.message);
-                    
+
                     // Second try: Google Geolocation API as fallback
                     if (GOOGLE_MAPS_API_KEY) {
                         try {
@@ -78,7 +105,7 @@ const HospitalSearch = () => {
                                 setLoading(false);
                                 // Auto-search after getting location
                                 setTimeout(() => {
-                                    handleSearch({ preventDefault: () => {} });
+                                    handleSearch({ preventDefault: () => { } });
                                 }, 500);
                                 return;
                             }
@@ -86,7 +113,7 @@ const HospitalSearch = () => {
                             console.error("Google geolocation error:", googleError);
                         }
                     }
-                    
+
                     // Third try: IP-based geolocation as last resort
                     try {
                         const ipLocation = await getLocationViaIP();
@@ -101,14 +128,14 @@ const HospitalSearch = () => {
                             setLoading(false);
                             // Auto-search after getting location
                             setTimeout(() => {
-                                handleSearch({ preventDefault: () => {} });
+                                handleSearch({ preventDefault: () => { } });
                             }, 500);
                             return;
                         }
                     } catch (ipError) {
                         console.error("IP geolocation error:", ipError);
                     }
-                    
+
                     // All methods failed
                     setError("Unable to get your location. Please enable location permissions or enter your city manually.");
                     setUseGPS(false);
@@ -126,7 +153,7 @@ const HospitalSearch = () => {
             setLoading(false);
         }
     };
-    
+
     const getLocationViaGoogle = async () => {
         try {
             const response = await fetch(`https://www.googleapis.com/geolocation/v1/geolocate?key=${GOOGLE_MAPS_API_KEY}`, {
@@ -138,11 +165,11 @@ const HospitalSearch = () => {
                     considerIp: true
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error('Google Geolocation API request failed');
             }
-            
+
             const data = await response.json();
             return {
                 lat: data.location.lat,
@@ -153,7 +180,7 @@ const HospitalSearch = () => {
             return null;
         }
     };
-    
+
     const getLocationViaIP = async () => {
         try {
             // Using ipapi.co free service (no API key required)
@@ -161,7 +188,7 @@ const HospitalSearch = () => {
             if (!response.ok) {
                 throw new Error('IP geolocation request failed');
             }
-            
+
             const data = await response.json();
             return {
                 lat: data.latitude,
@@ -240,7 +267,7 @@ const HospitalSearch = () => {
         <div className="space-y-6">
             <Card className="p-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">Find Nearby Hospitals</h1>
-                
+
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3">
                         <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -259,7 +286,7 @@ const HospitalSearch = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="mb-4 space-y-3">
                     <label className="flex items-center gap-2">
                         <input
@@ -273,7 +300,7 @@ const HospitalSearch = () => {
                         />
                         <span className="text-sm font-medium">Use my location (GPS)</span>
                     </label>
-                    
+
                     {useGPS && searchParams.latitude && searchParams.longitude && (
                         <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -282,7 +309,7 @@ const HospitalSearch = () => {
                             <span>Location detected: {searchParams.latitude.toFixed(4)}, {searchParams.longitude.toFixed(4)}</span>
                         </div>
                     )}
-                    
+
                     {useGPS && loading && !searchParams.latitude && (
                         <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded">
                             <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -393,6 +420,49 @@ const HospitalSearch = () => {
                 )}
             </Card>
 
+            {/* Map Section */}
+            <Card className="p-0 overflow-hidden h-[400px]">
+                {(searchParams.latitude && searchParams.longitude) || hospitals.length > 0 ? (
+                    <MapContainer
+                        center={[searchParams.latitude || 28.6139, searchParams.longitude || 77.2090]}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%' }}
+                    >
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        <MapUpdater center={searchParams.latitude && searchParams.longitude ? [searchParams.latitude, searchParams.longitude] : null} />
+
+                        {/* User Location */}
+                        {searchParams.latitude && searchParams.longitude && (
+                            <Marker position={[searchParams.latitude, searchParams.longitude]}>
+                                <Popup>You are here</Popup>
+                            </Marker>
+                        )}
+
+                        {/* Hospitals */}
+                        {hospitals.map(hospital => (
+                            hospital.location?.coordinates && (
+                                <Marker
+                                    key={hospital.id}
+                                    position={[hospital.location.coordinates[1], hospital.location.coordinates[0]]}
+                                >
+                                    <Popup>
+                                        <strong>{hospital.name}</strong><br />
+                                        {hospital.capacity.available_beds} beds available
+                                    </Popup>
+                                </Marker>
+                            )
+                        ))}
+                    </MapContainer>
+                ) : (
+                    <div className="h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                        Map will appear when location is detected
+                    </div>
+                )}
+            </Card>
+
             <div className="space-y-4">
                 {hospitals.length > 0 && (
                     <div className="text-sm text-gray-600">
@@ -455,28 +525,28 @@ const HospitalSearch = () => {
                         </div>
 
                         <div className="flex gap-3">
-                            <Button 
-                                variant="primary" 
+                            <Button
+                                variant="primary"
                                 onClick={() => window.open(`tel:${hospital.phone}`)}
                                 className="flex-1"
                             >
                                 📞 Call Now
                             </Button>
-                            <Button 
+                            <Button
                                 variant="outline"
                                 onClick={() => setReviewHospital(hospital)}
                                 className="flex-1"
                             >
                                 ⭐ Review
                             </Button>
-                            <Button 
+                            <Button
                                 variant="primary"
                                 onClick={() => setBookingHospital(hospital)}
                                 className="flex-1"
                             >
                                 📅 Book
                             </Button>
-                            <Button 
+                            <Button
                                 variant="outline"
                                 onClick={() => window.location.href = `/patient/referral?hospital=${hospital.id}`}
                                 className="flex-1"
@@ -500,7 +570,7 @@ const HospitalSearch = () => {
                     hospitalName={reviewHospital.name}
                     onClose={() => setReviewHospital(null)}
                     onSuccess={() => {
-                        handleSearch({ preventDefault: () => {} });
+                        handleSearch({ preventDefault: () => { } });
                     }}
                 />
             )}

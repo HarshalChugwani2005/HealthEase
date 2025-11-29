@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     razorpay_key_secret: str
     openweather_api_key: str = "demo"  # Get free key from openweathermap.org
     google_maps_api_key: str = ""  # Get from Google Cloud Console
+    gemini_api_key: str = "" # Google Gemini API Key
     
     # SMTP
     smtp_host: str = "smtp.gmail.com"

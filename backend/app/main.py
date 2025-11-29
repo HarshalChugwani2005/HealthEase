@@ -24,7 +24,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,6 +78,12 @@ async def health_check():
         "database": "connected" if db.connected else "unavailable",
     }
     return status
+
+
+@app.get("/api/health", tags=["Health"])
+async def api_health_check():
+    """Health check endpoint under /api prefix"""
+    return await health_check()
 
 
 # Include routers

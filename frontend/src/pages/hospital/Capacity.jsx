@@ -8,7 +8,9 @@ const Capacity = () => {
         total_beds: 0,
         available_beds: 0,
         icu_beds: 0,
-        ventilators: 0
+        available_icu_beds: 0,
+        ventilators: 0,
+        available_ventilators: 0
     });
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -37,11 +39,13 @@ const Capacity = () => {
         setSuccess('');
 
         try {
-            await api.post('/api/capacity/update', capacity);
+            await api.put('/api/capacity/update', capacity);
             setSuccess('Capacity updated successfully');
             fetchCapacity();
         } catch (err) {
-            setError(err.response?.data?.detail || 'Error updating capacity');
+            console.error('Update capacity error:', err);
+            const errorMessage = err.response?.data?.detail || err.message || 'Error updating capacity';
+            setError(typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage);
         } finally {
             setUpdating(false);
         }
@@ -61,7 +65,7 @@ const Capacity = () => {
         }
     };
 
-    const occupancyPercentage = capacity.total_beds > 0 ? 
+    const occupancyPercentage = capacity.total_beds > 0 ?
         ((capacity.total_beds - capacity.available_beds) / capacity.total_beds * 100).toFixed(1) : 0;
 
     if (loading) {
@@ -101,13 +105,12 @@ const Capacity = () => {
                 <div className="mb-6">
                     <p className="text-sm text-gray-600 mb-2">Occupancy Rate</p>
                     <div className="w-full bg-gray-200 rounded-full h-4">
-                        <div 
-                            className={`h-4 rounded-full ${
-                                occupancyPercentage >= 90 ? 'bg-red-600' :
+                        <div
+                            className={`h-4 rounded-full ${occupancyPercentage >= 90 ? 'bg-red-600' :
                                 occupancyPercentage >= 75 ? 'bg-orange-600' :
-                                occupancyPercentage >= 50 ? 'bg-yellow-600' :
-                                'bg-green-600'
-                            }`}
+                                    occupancyPercentage >= 50 ? 'bg-yellow-600' :
+                                        'bg-green-600'
+                                }`}
                             style={{ width: `${occupancyPercentage}%` }}
                         ></div>
                     </div>
@@ -133,8 +136,8 @@ const Capacity = () => {
                     <div>
                         <p className="text-sm font-medium text-gray-700 mb-3">Available Beds</p>
                         <div className="flex items-center gap-3">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('available_beds', -1)}
                                 disabled={capacity.available_beds <= 0}
                             >
@@ -143,8 +146,8 @@ const Capacity = () => {
                             <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
                                 {capacity.available_beds}
                             </span>
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('available_beds', 1)}
                                 disabled={capacity.available_beds >= capacity.total_beds}
                             >
@@ -156,8 +159,8 @@ const Capacity = () => {
                     <div>
                         <p className="text-sm font-medium text-gray-700 mb-3">ICU Beds</p>
                         <div className="flex items-center gap-3">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('icu_beds', -1)}
                                 disabled={capacity.icu_beds <= 0}
                             >
@@ -166,8 +169,8 @@ const Capacity = () => {
                             <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
                                 {capacity.icu_beds}
                             </span>
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('icu_beds', 1)}
                             >
                                 + 1
@@ -178,8 +181,8 @@ const Capacity = () => {
                     <div>
                         <p className="text-sm font-medium text-gray-700 mb-3">Ventilators</p>
                         <div className="flex items-center gap-3">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('ventilators', -1)}
                                 disabled={capacity.ventilators <= 0}
                             >
@@ -188,8 +191,8 @@ const Capacity = () => {
                             <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
                                 {capacity.ventilators}
                             </span>
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => handleQuickUpdate('ventilators', 1)}
                             >
                                 + 1
@@ -210,7 +213,7 @@ const Capacity = () => {
                             <input
                                 type="number"
                                 value={capacity.total_beds}
-                                onChange={(e) => setCapacity({...capacity, total_beds: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setCapacity({ ...capacity, total_beds: parseInt(e.target.value) || 0 })}
                                 className="w-full rounded-md border-gray-300"
                                 min="0"
                             />
@@ -223,7 +226,7 @@ const Capacity = () => {
                             <input
                                 type="number"
                                 value={capacity.available_beds}
-                                onChange={(e) => setCapacity({...capacity, available_beds: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setCapacity({ ...capacity, available_beds: parseInt(e.target.value) || 0 })}
                                 className="w-full rounded-md border-gray-300"
                                 min="0"
                                 max={capacity.total_beds}
@@ -237,9 +240,23 @@ const Capacity = () => {
                             <input
                                 type="number"
                                 value={capacity.icu_beds}
-                                onChange={(e) => setCapacity({...capacity, icu_beds: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setCapacity({ ...capacity, icu_beds: parseInt(e.target.value) || 0 })}
                                 className="w-full rounded-md border-gray-300"
                                 min="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Available ICU Beds
+                            </label>
+                            <input
+                                type="number"
+                                value={capacity.available_icu_beds}
+                                onChange={(e) => setCapacity({ ...capacity, available_icu_beds: parseInt(e.target.value) || 0 })}
+                                className="w-full rounded-md border-gray-300"
+                                min="0"
+                                max={capacity.icu_beds}
                             />
                         </div>
 
@@ -250,9 +267,23 @@ const Capacity = () => {
                             <input
                                 type="number"
                                 value={capacity.ventilators}
-                                onChange={(e) => setCapacity({...capacity, ventilators: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setCapacity({ ...capacity, ventilators: parseInt(e.target.value) || 0 })}
                                 className="w-full rounded-md border-gray-300"
                                 min="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Available Ventilators
+                            </label>
+                            <input
+                                type="number"
+                                value={capacity.available_ventilators}
+                                onChange={(e) => setCapacity({ ...capacity, available_ventilators: parseInt(e.target.value) || 0 })}
+                                className="w-full rounded-md border-gray-300"
+                                min="0"
+                                max={capacity.ventilators}
                             />
                         </div>
                     </div>
@@ -262,7 +293,7 @@ const Capacity = () => {
                     </Button>
                 </form>
             </Card>
-        </div>
+        </div >
     );
 };
 

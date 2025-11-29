@@ -1,4 +1,4 @@
-from openai import OpenAI
+import google.generativeai as genai
 from app.config import settings
 from app.models.hospital import Hospital
 from app.models.surge_prediction import SurgePrediction
@@ -14,10 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """Service for OpenAI-powered predictions and recommendations"""
+    """Service for Gemini-powered predictions and recommendations"""
     
     def __init__(self):
-        self.client = OpenAI(api_key=settings.openai_api_key)
+        # Configure Gemini
+        api_key = settings.gemini_api_key or settings.google_maps_api_key
+        if api_key:
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+        else:
+            logger.warning("Gemini API key not configured. AI features will be disabled.")
+            self.model = None
         
     def _rule_based_health_advice(self, message: str) -> str:
         text = (message or "").lower()
@@ -173,16 +180,12 @@ class AIService:
         multimodal_data: Dict
     ) -> SurgePrediction:
         """
-        Use OpenAI to predict patient surge based on multimodal data
-        
-        Args:
-            hospital_id: Hospital ObjectId
-            multimodal_data: Dict containing weather, festivals, pollution, etc.
-            
-        Returns:
-            SurgePrediction object
+        Use Gemini to predict patient surge based on multimodal data
         """
         try:
+            if not self.model:
+                raise ValueError("Gemini not configured")
+
             # Prepare context for AI
             hospital = await Hospital.get(hospital_id)
             
@@ -209,18 +212,11 @@ class AIService:
             Return ONLY valid JSON, no additional text.
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a healthcare analytics AI that provides predictions in JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500
-            )
+            response = self.model.generate_content(prompt)
             
-            # Parse AI response
-            prediction_data = json.loads(response.choices[0].message.content)
+            # Parse AI response (strip markdown if present)
+            content = response.text.replace('```json', '').replace('```', '').strip()
+            prediction_data = json.loads(content)
             
             # Create surge prediction
             surge_prediction = SurgePrediction(
@@ -265,15 +261,11 @@ class AIService:
     ) -> Dict[str, float]:
         """
         AI-powered dynamic split of ₹110 between hospitals
-        
-        Args:
-            from_hospital: Referring hospital
-            to_hospital: Accepting hospital
-            
-        Returns:
-            Dict with 'from_hospital_share' and 'to_hospital_share'
         """
         try:
+            if not self.model:
+                raise ValueError("Gemini not configured")
+
             prompt = f"""
             Calculate a fair revenue split of ₹110 between two hospitals for a patient referral:
             
@@ -300,17 +292,9 @@ class AIService:
             Return ONLY valid JSON.
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a healthcare finance AI that provides fair payment splits in JSON format."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.5,
-                max_tokens=200
-            )
-            
-            split_data = json.loads(response.choices[0].message.content)
+            response = self.model.generate_content(prompt)
+            content = response.text.replace('```json', '').replace('```', '').strip()
+            split_data = json.loads(content)
             
             logger.info(
                 f"AI-calculated referral split: From={split_data['from_hospital_share']}, "
@@ -335,9 +319,11 @@ class AIService:
     async def generate_autonomous_plan(self, prediction: Dict) -> Dict:
         """
         Agentic AI: Generate autonomous resource reallocation plan based on predictions.
-        This simulates the 'Proactive Preparation Phase'.
         """
         try:
+            if not self.model:
+                raise ValueError("Gemini not configured")
+
             prompt = f"""
             As an Autonomous Hospital Management Agent, analyze this surge prediction and generate a proactive resource reallocation plan.
             
@@ -355,18 +341,12 @@ class AIService:
                 ],
                 "reasoning": "Brief explanation of the strategy"
             }}
+            Return ONLY valid JSON.
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are an expert autonomous hospital operations agent."},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"}
-            )
-            
-            return json.loads(response.choices[0].message.content)
+            response = self.model.generate_content(prompt)
+            content = response.text.replace('```json', '').replace('```', '').strip()
+            return json.loads(content)
         except Exception as e:
             logger.error(f"Agentic plan generation failed: {e}")
             return {
@@ -386,8 +366,7 @@ class AIService:
         AI Health Assistant for patients
         """
         try:
-            if not settings.openai_api_key or "your-openai-api-key" in settings.openai_api_key:
-                logger.error("OpenAI API key not configured properly. Falling back to rule-based guidance.")
+            if not self.model:
                 return self._rule_based_health_advice(message)
             
             system_prompt = """
@@ -399,28 +378,71 @@ class AIService:
             - Do not provide definitive medical diagnoses.
             """
             
-            messages = [{"role": "system", "content": system_prompt}]
-            # Ensure history has valid roles
-            valid_history = [msg for msg in history if msg.get('role') in ['user', 'assistant']]
-            messages.extend(valid_history)
-            messages.append({"role": "user", "content": message})
+            # Gemini handles history differently, but we can just append context for now
+            # or use start_chat if we want to maintain state properly.
+            # For simplicity in this stateless endpoint, we'll construct a prompt.
             
-            logger.info(f"Making OpenAI API call with key ending in '...{settings.openai_api_key[-4:]}'")
+            logger.info("Generating Gemini response for chat...")
+            chat = self.model.start_chat(history=[])
             
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                max_tokens=300
-            )
+            # Add system instruction via initial context if needed, or just rely on the prompt
+            full_prompt = f"{system_prompt}\n\nUser Message: {message}"
             
-            return response.choices[0].message.content
+            response = chat.send_message(full_prompt)
+            logger.info("Gemini response generated successfully")
+            return response.text
+            
         except Exception as e:
             logger.error(f"Chat error: {e}", exc_info=True)
-            
-            if "AuthenticationError" in str(type(e)):
-                logger.error("OpenAI AuthenticationError – likely invalid or revoked API key.")
-                return self._rule_based_health_advice(message)
             return self._rule_based_health_advice(message)
+
+    async def get_health_forecast(self, city: str) -> Dict:
+        """
+        Generate AQI forecast and Plausible Illness Calendar for the next 7 days
+        """
+        try:
+            if not self.model:
+                raise ValueError("Gemini not configured")
+
+            prompt = f"""
+            Generate a 7-day health forecast for {city}, India.
+            Include:
+            1. Forecasted AQI (Air Quality Index) for each day (realistic values based on current season).
+            2. Plausible illnesses/health risks for each day based on weather/AQI.
+            
+            Output JSON format:
+            {{
+                "forecast": [
+                    {{
+                        "date": "YYYY-MM-DD",
+                        "aqi": integer,
+                        "aqi_category": "Good" | "Moderate" | "Unhealthy",
+                        "illnesses": ["illness1", "illness2"],
+                        "precaution": "Brief precaution"
+                    }}
+                ]
+            }}
+            Return ONLY valid JSON.
+            """
+            
+            response = self.model.generate_content(prompt)
+            content = response.text.replace('```json', '').replace('```', '').strip()
+            return json.loads(content)
+        except Exception as e:
+            logger.error(f"Health forecast error: {e}")
+            # Fallback data
+            today = datetime.now()
+            return {
+                "forecast": [
+                    {
+                        "date": (today + timedelta(days=i)).strftime("%Y-%m-%d"),
+                        "aqi": 150,
+                        "aqi_category": "Moderate",
+                        "illnesses": ["Seasonal Flu", "Allergies"],
+                        "precaution": "Wear a mask if sensitive"
+                    } for i in range(7)
+                ]
+            }
 
 
 # Global AI service instance
