@@ -16,7 +16,6 @@ from app.middleware.auth import get_current_user
 from datetime import datetime
 import logging
 from app.database import db
-from app.database import db
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -182,6 +181,21 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     Get current authenticated user information with profile details
     """
     if not db.connected:
+        # Demo auth fallback: return synthetic profile for demo user
+        if settings.demo_auth_enabled and hasattr(current_user, 'id') and str(current_user.id) == "demo-user-id":
+            return {
+                "id": "demo-user-id",
+                "email": settings.demo_user_email,
+                "role": UserRole.PATIENT.value,
+                "is_active": True,
+                "profile": {
+                    "full_name": "Demo Patient",
+                    "phone": "+1234567890",
+                    "blood_group": "O+",
+                    "city": "Demo City",
+                    "state": "Demo State"
+                }
+            }
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                             detail="Database unavailable. Please try again later.")
     response = {

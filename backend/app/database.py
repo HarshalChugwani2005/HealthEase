@@ -1,25 +1,31 @@
+"""
+MongoDB database connection and initialization module.
+Handles connection to MongoDB Atlas with automatic fallback mechanisms.
+"""
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from app.config import settings
 import logging
-import certifi
 
 logger = logging.getLogger(__name__)
 
 
 class Database:
+    """Database connection manager"""
     client: AsyncIOMotorClient = None
     connected: bool = False
-    
+
 
 db = Database()
 
 
 async def connect_to_mongo():
-    """Connect to MongoDB and initialize Beanie ODM"""
-    from app.utils.mongo_utils import get_direct_connection_url
+    """
+    Connect to MongoDB and initialize Beanie ODM.
+    Supports MongoDB Atlas with srv:// protocol.
+    """
     
-    # Import all models here to register with Beanie
+    # Import all models for Beanie registration
     from app.models.user import User
     from app.models.hospital import Hospital
     from app.models.patient import Patient
@@ -48,78 +54,42 @@ async def connect_to_mongo():
         EmergencyAlert, N8NWorkflow, WorkflowExecution, WorkflowTemplate, AutomationRule
     ]
 
-    async def init_db(client):
+    try:
+        logger.info(f"Connecting to MongoDB...")
+        
+        # Create MongoDB client with SSL/TLS disabled
+        db.client = AsyncIOMotorClient(
+            settings.mongodb_url,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            tls=True,
+            tlsAllowInvalidCertificates=True,
+            tlsAllowInvalidHostnames=True
+        )
+        
+        # Initialize Beanie with all document models
         await init_beanie(
-            database=client.get_default_database(),
+            database=db.client.get_default_database(),
             document_models=document_models
         )
-
-    # 1. Try Standard Connection
-    try:
-        logger.info(f"Connecting to MongoDB at {settings.mongodb_url}")
-        # Use certifi CA bundle to avoid Windows trust store issues
-        mongo_kwargs = {
-            "serverSelectionTimeoutMS": 10000,
-            "connectTimeoutMS": 10000,
-        }
-        # Base TLS settings
-        if settings.mongodb_url.startswith("mongodb+srv://") or settings.mongodb_url.startswith("mongodb://"):
-            if settings.mongodb_tls_insecure:
-                mongo_kwargs.update({"tls": True, "tlsInsecure": True})
-            else:
-                mongo_kwargs.update({"tls": True, "tlsCAFile": certifi.where()})
-
-        db.client = AsyncIOMotorClient(settings.mongodb_url, **mongo_kwargs)
-        await init_db(db.client)
+        
+        # Test the connection
+        await db.client.admin.command('ping')
+        
         db.connected = True
-        logger.info("Successfully connected to MongoDB and initialized Beanie")
-        return
-
+        logger.info("✓ Successfully connected to MongoDB and initialized Beanie")
+        
     except Exception as e:
-        logger.error(f"Standard MongoDB connection failed: {e}")
-    
-    # 2. Try Direct Fallback (if applicable)
-    try:
-        fallback_url = get_direct_connection_url(settings.mongodb_url)
-        if fallback_url:
-            logger.warning("Attempting direct MongoDB fallback...")
-            # Direct fallback already includes tlsInsecure=true in the URL
-            db.client = AsyncIOMotorClient(
-                fallback_url,
-                serverSelectionTimeoutMS=10000,
-                connectTimeoutMS=10000,
-            )
-            await init_db(db.client)
-            db.connected = True
-            logger.info("Successfully connected to MongoDB via direct fallback")
-            return
-    except Exception as e:
-        logger.error(f"Direct MongoDB fallback failed: {e}")
-
-    # 3. Try Localhost Fallback
-    try:
-        local_url = "mongodb://localhost:27017/healthease"
-        logger.warning(f"Attempting local MongoDB fallback at {local_url}")
-        db.client = AsyncIOMotorClient(
-            local_url,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000,
-        )
-        await init_db(db.client)
-        db.connected = True
-        logger.info("Connected to local MongoDB and initialized Beanie")
-    except Exception as fe:
-        logger.error(f"Local MongoDB fallback failed: {fe}")
+        logger.error(f"✗ MongoDB connection failed: {e}")
         db.connected = False
-        # Do not raise here so the app can start in degraded mode
-        return
+        logger.warning("⚠ Application starting in DEGRADED MODE (Database unavailable)")
 
 
 async def close_mongo_connection():
-    """Close MongoDB connection"""
+    """Close MongoDB connection gracefully"""
     try:
         if db.client:
             db.client.close()
-            logger.info("Closed MongoDB connection")
+            logger.info("MongoDB connection closed")
     except Exception as e:
         logger.error(f"Error closing MongoDB connection: {e}")

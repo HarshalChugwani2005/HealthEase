@@ -95,17 +95,20 @@ async def search_hospitals(
             # Calculate travel time (assuming average speed 40 km/h in city)
             travel_time_minutes = int((distance / 40) * 60)
             
-            # Calculate occupancy
+            # Calculate occupancy (dict with beds/icu/ventilators)
             occupancy = hospital.get_occupancy_percentage()
+            # Use an average occupancy value for status computation
+            occ_values = [v for v in occupancy.values() if isinstance(v, (int, float))]
+            avg_occupancy = sum(occ_values) / len(occ_values) if occ_values else 0
             
             # Determine status
-            if occupancy >= 95:
+            if avg_occupancy >= 95:
                 status_text = "Critical"
                 status_color = "red"
-            elif occupancy >= 80:
+            elif avg_occupancy >= 80:
                 status_text = "High Occupancy"
                 status_color = "orange"
-            elif occupancy >= 60:
+            elif avg_occupancy >= 60:
                 status_text = "Moderate"
                 status_color = "yellow"
             else:

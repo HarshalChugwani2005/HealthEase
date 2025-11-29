@@ -43,6 +43,19 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Demo auth fallback: return synthetic user object for demo-user-id
+    if user_id == "demo-user-id":
+        # Create a mock User object with demo credentials
+        from app.config import settings
+        demo_user = User(
+            email=settings.demo_user_email,
+            password_hash="",  # Not used for demo
+            role=UserRole.PATIENT,
+            is_active=True
+        )
+        demo_user.id = user_id  # Set the ID directly
+        return demo_user
+    
     # Fetch user from database
     try:
         user = await User.get(ObjectId(user_id))

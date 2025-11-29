@@ -19,6 +19,41 @@ class AIService:
     def __init__(self):
         self.client = OpenAI(api_key=settings.openai_api_key)
         
+    def _rule_based_health_advice(self, message: str) -> str:
+        text = (message or "").lower()
+        red_flags = [
+            (['severe chest pain', 'crushing chest', 'shortness of breath', 'fainting'],
+             "This could be an emergency. Please call emergency services or go to the nearest ER immediately."),
+            (['stroke', 'face droop', 'slurred speech', 'one side weakness'],
+             "Possible stroke symptoms. Seek emergency care immediately."),
+            (['severe bleeding', 'uncontrolled bleeding'],
+             "Uncontrolled bleeding requires urgent medical attention. Go to an ER now."),
+        ]
+        for keywords, advice in red_flags:
+            if any(k in text for k in keywords):
+                return advice
+
+        mappings = [
+            (['fever', 'temperature', 'cold', 'cough', 'sore throat'],
+             "You may have a viral infection. Rest, hydrate, and monitor temperature. See a General Physician if high fever persists >3 days or symptoms worsen."),
+            (['chest pain', 'palpitations', 'breathless', 'shortness of breath'],
+             "Please consult a Cardiologist or go to urgent care if symptoms are acute."),
+            (['stomach pain', 'abdominal pain', 'nausea', 'vomit', 'diarrhea', 'gastric'],
+             "Consider seeing a Gastroenterologist. Start with oral rehydration and light meals; seek care if pain is severe or persistent."),
+            (['headache', 'migraine', 'dizziness'],
+             "For headaches, ensure hydration, rest, and avoid screen strain. If the headache is the worst you've had or associated with fever/neck stiffness, seek urgent care. A Neurologist can help with persistent migraines."),
+            (['back pain', 'joint pain', 'knee pain', 'shoulder pain'],
+             "Consider an Orthopedist or Physiotherapist. Gentle mobility and cold/warm compresses can help initially."),
+            (['skin rash', 'itching', 'allergy', 'hives'],
+             "This could be an allergic or dermatological condition. An Allergist or Dermatologist can help. Consider antihistamines if previously tolerated."),
+            (['anxiety', 'low mood', 'stress', 'panic'],
+             "A Psychologist or Psychiatrist can help. Practice breathing exercises and seek support if symptoms interfere with daily life."),
+        ]
+        for keywords, advice in mappings:
+            if any(k in text for k in keywords):
+                return advice + " This is general guidance, not a diagnosis."
+        return "I recommend starting with a General Physician who can assess your symptoms and direct you to the right specialist. This is general guidance, not a diagnosis."
+        
     async def fetch_weather_data(self, city: str) -> Dict:
         """Fetch weather data from OpenWeatherMap API"""
         try:
@@ -175,7 +210,7 @@ class AIService:
             """
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a healthcare analytics AI that provides predictions in JSON format."},
                     {"role": "user", "content": prompt}
@@ -266,7 +301,7 @@ class AIService:
             """
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a healthcare finance AI that provides fair payment splits in JSON format."},
                     {"role": "user", "content": prompt}
@@ -323,7 +358,7 @@ class AIService:
             """
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are an expert autonomous hospital operations agent."},
                     {"role": "user", "content": prompt}
@@ -351,10 +386,9 @@ class AIService:
         AI Health Assistant for patients
         """
         try:
-            # Check if API key is available
             if not settings.openai_api_key or "your-openai-api-key" in settings.openai_api_key:
-                logger.error("OpenAI API key not configured properly. Please check your .env file.")
-                return "I apologize, but the AI assistant is currently not configured. Please contact support."
+                logger.error("OpenAI API key not configured properly. Falling back to rule-based guidance.")
+                return self._rule_based_health_advice(message)
             
             system_prompt = """
             You are HealthEase AI, a helpful medical assistant. 
@@ -374,7 +408,7 @@ class AIService:
             logger.info(f"Making OpenAI API call with key ending in '...{settings.openai_api_key[-4:]}'")
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=300
             )
@@ -383,20 +417,10 @@ class AIService:
         except Exception as e:
             logger.error(f"Chat error: {e}", exc_info=True)
             
-            # Check for specific OpenAI authentication error
             if "AuthenticationError" in str(type(e)):
-                 logger.error("OpenAI API request failed with an AuthenticationError. This strongly suggests the API key is invalid, expired, or has been revoked. Please verify the key in your .env file.")
-                 return "I'm sorry, but there seems to be an issue with my connection to the AI service (Authentication Error). The API key may be invalid. Please contact support."
-
-            # Provide helpful fallback responses based on common medical queries
-            if any(word in message.lower() for word in ['fever', 'temperature', 'cold']):
-                return "For fever and cold symptoms, I recommend: 1) Rest and stay hydrated, 2) Monitor your temperature, 3) If fever persists over 3 days or is very high, see a General Physician immediately."
-            elif any(word in message.lower() for word in ['chest', 'heart', 'pain']):
-                return "For any chest pain or heart-related symptoms, please see a Cardiologist immediately or go to the emergency room. Don't delay seeking medical attention."
-            elif any(word in message.lower() for word in ['stomach', 'abdomen', 'nausea']):
-                return "For stomach or abdominal issues, consider seeing a Gastroenterologist. If symptoms are severe or persistent, seek medical attention promptly."
-            else:
-                return "I apologize, but I'm having trouble processing your request right now. For any health concerns, I recommend consulting with a healthcare professional or visiting our hospital search to find appropriate specialists."
+                logger.error("OpenAI AuthenticationError – likely invalid or revoked API key.")
+                return self._rule_based_health_advice(message)
+            return self._rule_based_health_advice(message)
 
 
 # Global AI service instance

@@ -30,7 +30,8 @@ class HospitalSubscription(dict):
 
 class Hospital(Document):
     """Hospital model with geospatial support"""
-    user_id: ObjectId = Field(index=True)
+    # user_id can be optional for seeded/system-created hospitals
+    user_id: Optional[ObjectId] = Field(default=None, index=True)
     name: str
     address: str
     city: str
