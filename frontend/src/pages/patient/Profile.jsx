@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
+import EditProfileModal from '../../components/ui/EditProfileModal';
 
 const PatientProfile = () => {
     const { user } = useAuthStore();
     const profile = user?.profile || {};
+    const [showEditModal, setShowEditModal] = useState(false);
 
     return (
         <div className="space-y-6">
@@ -20,7 +22,13 @@ const PatientProfile = () => {
                         <h2 className="text-xl font-bold text-gray-900">{profile.full_name || 'User Name'}</h2>
                         <p className="text-gray-500">{user?.email || 'email@example.com'}</p>
                         <div className="mt-6 w-full">
-                            <Button className="w-full" variant="outline">Edit Profile</Button>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => setShowEditModal(true)}
+                            >
+                                Edit Profile
+                            </Button>
                         </div>
                     </div>
                 </Card>
@@ -53,6 +61,17 @@ const PatientProfile = () => {
                     </dl>
                 </Card>
             </div>
+
+            {showEditModal && (
+                <EditProfileModal
+                    profile={profile}
+                    onClose={() => setShowEditModal(false)}
+                    onSuccess={() => {
+                        // Ideally trigger a re-fetch or just close as the store is updated
+                        setShowEditModal(false);
+                    }}
+                />
+            )}
         </div>
     );
 };

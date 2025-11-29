@@ -41,22 +41,37 @@ async def get_patient_profile(current_user: User = Depends(get_patient_user)):
     }
 
 
+from pydantic import BaseModel
+from datetime import date
+
+class UpdatePatientProfileRequest(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    blood_group: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+
 @router.put("/me")
 async def update_patient_profile(
-    profile_data: dict,
+    profile_data: UpdatePatientProfileRequest,
     current_user: User = Depends(get_patient_user)
 ):
     """
     Update patient profile
     """
+    print(f"Received update request for user {current_user.id}")
+    print(f"Data: {profile_data}")
     patient = await Patient.find_one(Patient.user_id == current_user.id)
     
     if not patient:
         raise HTTPException(status_code=404, detail="Patient profile not found")
     
     # Update allowed fields
-    for key, value in profile_data.items():
-        if hasattr(patient, key) and key not in ["id", "user_id", "created_at"]:
+    update_dict = profile_data.dict(exclude_unset=True)
+    for key, value in update_dict.items():
+        if hasattr(patient, key):
             setattr(patient, key, value)
     
     patient.updated_at = datetime.utcnow()

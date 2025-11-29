@@ -5,6 +5,65 @@ import { NotificationCenter } from '../../components/ui/NotificationCenter';
 import AppointmentBooking from '../../components/ui/AppointmentBooking';
 import api from '../../lib/api';
 
+const AppointmentCard = ({ appointment, getTypeIcon, getStatusColor }) => (
+    <Card className="p-6">
+        <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+                <div className="text-3xl">
+                    {getTypeIcon(appointment.appointment_type)}
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            {appointment.hospital_name}
+                        </h3>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
+                            {appointment.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                    <div className="space-y-1 text-sm text-gray-600">
+                        <p><strong>Specialization:</strong> {appointment.specialization}</p>
+                        <p><strong>Type:</strong> {appointment.appointment_type.replace('_', ' ')}</p>
+                        <p><strong>Date & Time:</strong> {new Date(appointment.scheduled_time).toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+            <div className="flex flex-col gap-2">
+                {appointment.meeting_url && appointment.status === 'confirmed' && (
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => window.open(appointment.meeting_url, '_blank')}
+                    >
+                        Join Video Call
+                    </Button>
+                )}
+                {appointment.status === 'scheduled' && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            if (confirm('Are you sure you want to cancel this appointment?')) {
+                                // Implement cancel API call
+                                alert('Cancellation not implemented yet');
+                            }
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                )}
+            </div>
+        </div>
+
+        {appointment.doctor_notes && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-1">Doctor's Notes:</h4>
+                <p className="text-blue-800 text-sm">{appointment.doctor_notes}</p>
+            </div>
+        )}
+    </Card>
+);
+
 const AppointmentsPage = () => {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -57,6 +116,14 @@ const AppointmentsPage = () => {
         );
     }
 
+    const upcomingAppointments = appointments
+        .filter(a => new Date(a.scheduled_time) >= new Date())
+        .sort((a, b) => new Date(a.scheduled_time) - new Date(b.scheduled_time));
+
+    const pastAppointments = appointments
+        .filter(a => new Date(a.scheduled_time) < new Date())
+        .sort((a, b) => new Date(b.scheduled_time) - new Date(a.scheduled_time));
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white shadow-sm border-b">
@@ -87,65 +154,44 @@ const AppointmentsPage = () => {
                         </Button>
                     </Card>
                 ) : (
-                    <div className="space-y-6">
-                        {appointments.map((appointment) => (
-                            <Card key={appointment.id} className="p-6">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-4">
-                                        <div className="text-3xl">
-                                            {getTypeIcon(appointment.appointment_type)}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="text-lg font-semibold text-gray-900">
-                                                    {appointment.hospital_name}
-                                                </h3>
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(appointment.status)}`}>
-                                                    {appointment.status.replace('_', ' ').toUpperCase()}
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 text-sm text-gray-600">
-                                                <p><strong>Specialization:</strong> {appointment.specialization}</p>
-                                                <p><strong>Type:</strong> {appointment.appointment_type.replace('_', ' ')}</p>
-                                                <p><strong>Date & Time:</strong> {new Date(appointment.scheduled_time).toLocaleString()}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        {appointment.meeting_url && appointment.status === 'confirmed' && (
-                                            <Button
-                                                variant="primary"
-                                                size="sm"
-                                                onClick={() => window.open(appointment.meeting_url, '_blank')}
-                                            >
-                                                Join Video Call
-                                            </Button>
-                                        )}
-                                        {appointment.status === 'scheduled' && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                    // Cancel appointment functionality
-                                                    if (confirm('Are you sure you want to cancel this appointment?')) {
-                                                        // Implement cancel API call
-                                                    }
-                                                }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {appointment.doctor_notes && (
-                                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                        <h4 className="font-medium text-blue-900 mb-1">Doctor's Notes:</h4>
-                                        <p className="text-blue-800 text-sm">{appointment.doctor_notes}</p>
-                                    </div>
+                    <div className="space-y-8">
+                        {/* Upcoming Appointments */}
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 mb-4">Upcoming Appointments</h2>
+                            <div className="space-y-4">
+                                {upcomingAppointments.length === 0 ? (
+                                    <p className="text-gray-500 italic">No upcoming appointments.</p>
+                                ) : (
+                                    upcomingAppointments.map((appointment) => (
+                                        <AppointmentCard
+                                            key={appointment.id}
+                                            appointment={appointment}
+                                            getTypeIcon={getTypeIcon}
+                                            getStatusColor={getStatusColor}
+                                        />
+                                    ))
                                 )}
-                            </Card>
-                        ))}
+                            </div>
+                        </div>
+
+                        {/* Past Appointments */}
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 mb-4">Past Appointments</h2>
+                            <div className="space-y-4 opacity-75">
+                                {pastAppointments.length === 0 ? (
+                                    <p className="text-gray-500 italic">No past appointments.</p>
+                                ) : (
+                                    pastAppointments.map((appointment) => (
+                                        <AppointmentCard
+                                            key={appointment.id}
+                                            appointment={appointment}
+                                            getTypeIcon={getTypeIcon}
+                                            getStatusColor={getStatusColor}
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
