@@ -151,15 +151,6 @@ The platform uses distinct color themes for each role:
 - **Patient**: Soft Purple (#6C63FF) + Sky Blue (#48CAE4)
 - **Admin**: Deep Navy (#14213D) + Gold (#FCA311)
 
-## 💳 Payment Flow
-
-1. Patient searches for hospitals → selects Hospital B
-2. Hospital A (full capacity) creates referral to Hospital B
-3. Patient pays ₹150 via Razorpay
-4. **Distribution**:
-   - ₹40 → Platform fee
-   - ₹110 → Split between hospitals (AI-calculated)
-5. Wallets credited immediately upon payment confirmation
 
 ## 🤖 AI Features
 
@@ -177,32 +168,6 @@ AI calculates fair revenue split between hospitals based on:
 - Distance between hospitals
 - Specialization match
 
-## 🔧 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - JWT login
-- `GET /api/auth/me` - Current user
-
-### Hospitals
-- `GET /api/hospitals` - List hospitals
-- `GET /api/hospitals/nearby?lat=19.07&lng=72.87&radius_km=10` - Geo search
-- `PUT /api/hospitals/{id}/capacity` - Update capacity
-- `GET /api/hospitals/{id}/surge-predictions` - AI predictions
-- `GET /api/hospitals/{id}/wallet` - Wallet details
-
-### Patients
-- `GET /api/patients/hospitals/search` - Search with load probability
-- `POST /api/patients/referrals` - Create referral + Razorpay order
-- `POST /api/patients/referrals/{id}/payment` - Confirm payment
-
-### Admin
-- `GET /api/admin/analytics` - System metrics
-- `POST /api/admin/payouts/{hospital_id}` - Process withdrawal
-- `POST /api/admin/advertisements` - Manage ads
-
-Full API docs: http://localhost:8000/docs
-
 ## 🔐 Security
 
 - JWT-based authentication with RS256
@@ -211,7 +176,7 @@ Full API docs: http://localhost:8000/docs
 - MongoDB indexes for query optimization
 - CORS configured for production domains
 
-## 📦 Deployment
+## 📦 Deployment (Future Scope)
 
 ### Backend (Render/Railway recommended)
 ```bash
@@ -230,7 +195,7 @@ npm run build
 
 ## 🤝 Project Status
 
-✅ **Backend**: 100% Complete
+✅ **Backend**: 65.77% Complete
 - All 12 MongoDB models
 - All 25+ API endpoints
 - AI service integration
@@ -245,12 +210,6 @@ npm run build
 - Landing page with features/pricing
 - Login/Registration pages
 - Themed design system
-
-🚧 **In Progress**:
-- Individual dashboard pages (Hospital/Patient/Admin)
-- Payment integration UI
-- Charts and analytics visualizations
-- n8n workflow JSON files
 
 ## 🛠️ Technology Stack
 
@@ -276,7 +235,7 @@ Proprietary - All Rights Reserved
 
 ## 👥 Support
 
-For issues or questions, contact: [your-email@example.com]
+For issues or questions, contact: [2023.ved.joshi@ves.ac.in / 2023.harshal.chugwani@ves.ac.in / 2023.ronit.chugwani@ves.ac.in]
 
 ---
 

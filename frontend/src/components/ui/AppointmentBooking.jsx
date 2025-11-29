@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../lib/api';
@@ -12,6 +12,29 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [hospitals, setHospitals] = useState([]);
+    const [selectedHospital, setSelectedHospital] = useState(hospitalId || '');
+
+    useEffect(() => {
+        if (!hospitalId) {
+            fetchHospitals();
+        }
+    }, [hospitalId]);
+
+    const fetchHospitals = async () => {
+        try {
+            const response = await api.get('/api/search/hospitals', {
+                params: {
+                    latitude: 19.0760, // Default to Mumbai center
+                    longitude: 72.8777,
+                    max_distance_km: 50
+                }
+            });
+            setHospitals(response.data.results || []);
+        } catch (err) {
+            console.error('Error fetching hospitals:', err);
+        }
+    };
 
     const specializations = [
         'General Medicine', 'Cardiology', 'Neurology', 'Orthopedics',
@@ -23,9 +46,15 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
         setLoading(true);
         setError('');
 
+        if (!selectedHospital) {
+            setError('Please select a hospital');
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await api.post('/api/appointments/', {
-                hospital_id: hospitalId,
+                hospital_id: selectedHospital,
                 ...appointmentData,
                 scheduled_time: new Date(appointmentData.scheduled_time).toISOString()
             });
@@ -43,16 +72,16 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
     const generateTimeSlots = () => {
         const slots = [];
         const now = new Date();
-        
+
         for (let day = 1; day <= 7; day++) {
             const date = new Date(now);
             date.setDate(date.getDate() + day);
-            
+
             // Generate slots from 9 AM to 5 PM
             for (let hour = 9; hour < 17; hour++) {
                 const slotTime = new Date(date);
                 slotTime.setHours(hour, 0, 0, 0);
-                
+
                 slots.push({
                     value: slotTime.toISOString(),
                     label: slotTime.toLocaleString('en-US', {
@@ -66,11 +95,9 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
                 });
             }
         }
-        
+
         return slots;
     };
-
-    if (!hospitalId) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -79,7 +106,7 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h2 className="text-xl font-bold">Book Appointment</h2>
-                            <p className="text-gray-600 text-sm">{hospitalName}</p>
+                            <p className="text-gray-600 text-sm">{hospitalName || 'Select a Hospital'}</p>
                         </div>
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                             ✕
@@ -87,6 +114,25 @@ const AppointmentBooking = ({ hospitalId, hospitalName, onClose, onSuccess }) =>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {!hospitalId && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Select Hospital
+                                </label>
+                                <select
+                                    value={selectedHospital}
+                                    onChange={(e) => setSelectedHospital(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="">Select a hospital</option>
+                                    {hospitals.map((h) => (
+                                        <option key={h.id} value={h.id}>{h.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Specialization

@@ -9,6 +9,7 @@ from bson import ObjectId
 from datetime import datetime, timedelta
 from typing import List, Optional
 import uuid
+from beanie.operators import In
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
 
@@ -41,7 +42,7 @@ async def create_appointment(
         existing = await Appointment.find_one(
             Appointment.hospital_id == ObjectId(appointment_data.hospital_id),
             Appointment.scheduled_time == appointment_data.scheduled_time,
-            Appointment.status.in_([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED])
+            In(Appointment.status, [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED])
         )
         
         if existing:
