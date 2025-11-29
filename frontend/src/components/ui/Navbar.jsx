@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { NotificationCenter } from './NotificationCenter';
 import { Home, Hospital, User, LogOut, BarChart } from 'lucide-react';
 
 const Navbar = ({ role }) => {
@@ -22,6 +23,7 @@ const Navbar = ({ role }) => {
         ],
         patient: [
             { name: 'Find Hospitals', href: '/patient/search', icon: Hospital },
+            { name: 'Appointments', href: '/patient/appointments', icon: BarChart },
             { name: 'My Referrals', href: '/patient/referral', icon: BarChart },
             { name: 'Alerts', href: '/patient/alerts', icon: Home },
             { name: 'Profile', href: '/patient/profile', icon: User },
@@ -71,6 +73,7 @@ const Navbar = ({ role }) => {
 
                     {/* User Menu */}
                     <div className="flex items-center space-x-4">
+                        <NotificationCenter />
                         <span className="text-sm">{user?.email}</span>
                         <button
                             onClick={handleLogout}

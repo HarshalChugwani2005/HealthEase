@@ -16,20 +16,23 @@ class PaymentService:
         self.client = razorpay.Client(
             auth=(settings.razorpay_key_id, settings.razorpay_key_secret)
         )
+        self.razorpay_key_id = settings.razorpay_key_id
     
-    async def create_order(
+    def create_order(
         self,
         amount: int,  # Amount in paise (₹150 = 15000)
-        patient_id: str,
-        referral_id: str
+        currency: str = "INR",
+        receipt: str = "",
+        notes: dict = None
     ) -> Dict:
         """
         Create Razorpay order for referral payment
         
         Args:
             amount: Amount in paise
-            patient_id: Patient ID
-            referral_id: Referral ID
+            currency: Currency code
+            receipt: Receipt ID
+            notes: Additional notes
             
         Returns:
             Razorpay order details
@@ -37,12 +40,9 @@ class PaymentService:
         try:
             order_data = {
                 "amount": amount,
-                "currency": "INR",
-                "receipt": f"referral_{referral_id}",
-                "notes": {
-                    "patient_id": patient_id,
-                    "referral_id": referral_id
-                }
+                "currency": currency,
+                "receipt": receipt,
+                "notes": notes or {}
             }
             
             order = self.client.order.create(data=order_data)
@@ -53,38 +53,38 @@ class PaymentService:
             logger.error(f"Failed to create Razorpay order: {e}")
             raise
     
-    def verify_payment_signature(
+    def verify_signature(
         self,
-        order_id: str,
-        payment_id: str,
-        signature: str
+        razorpay_order_id: str,
+        razorpay_payment_id: str,
+        razorpay_signature: str
     ) -> bool:
         """
         Verify Razorpay payment signature
         
         Args:
-            order_id: Razorpay order ID
-            payment_id: Razorpay payment ID
-            signature: Payment signature
+            razorpay_order_id: Razorpay order ID
+            razorpay_payment_id: Razorpay payment ID
+            razorpay_signature: Payment signature
             
         Returns:
             Boolean indicating signature validity
         """
         try:
             # Generate signature
-            message = f"{order_id}|{payment_id}"
+            message = f"{razorpay_order_id}|{razorpay_payment_id}"
             generated_signature = hmac.new(
                 settings.razorpay_key_secret.encode(),
                 message.encode(),
                 hashlib.sha256
             ).hexdigest()
             
-            is_valid = hmac.compare_digest(generated_signature, signature)
+            is_valid = hmac.compare_digest(generated_signature, razorpay_signature)
             
             if is_valid:
-                logger.info(f"Payment signature verified for order {order_id}")
+                logger.info(f"Payment signature verified for order {razorpay_order_id}")
             else:
-                logger.warning(f"Invalid payment signature for order {order_id}")
+                logger.warning(f"Invalid payment signature for order {razorpay_order_id}")
             
             return is_valid
             

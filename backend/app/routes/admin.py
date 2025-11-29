@@ -85,61 +85,108 @@ async def update_hospital_subscription(
 @router.get("/analytics")
 async def get_system_analytics(current_user: User = Depends(get_admin_user)):
     """
-    Get system-wide analytics
+    Enhanced system-wide analytics dashboard
     """
     # Count hospitals by subscription
     total_hospitals = await Hospital.find_all().count()
-    free_hospitals = await Hospital.find({"subscription.plan": "free"}).count()
-    paid_hospitals = await Hospital.find({"subscription.plan": "paid"}).count()
+    free_hospitals = await Hospital.find(Hospital.subscription_tier == "free").count()
+    paid_hospitals = await Hospital.find(Hospital.subscription_tier == "paid").count()
+    verified_hospitals = await Hospital.find(Hospital.is_verified == True).count()
     
     # Count patients
     total_patients = await Patient.find_all().count()
     
     # Count referrals by status
-    total_referrals = await Referral.find_all().count()
-    completed_referrals = await Referral.find({"status": "completed"}).count()
-    pending_referrals = await Referral.find({"status": "pending"}).count()
+    all_referrals = await Referral.find_all().to_list()
+    total_referrals = len(all_referrals)
+    completed_referrals = sum(1 for r in all_referrals if r.payment_status == "completed")
+    pending_referrals = sum(1 for r in all_referrals if r.payment_status == "pending")
     
     # Calculate revenue (platform fees from completed referrals)
-    completed_refs = await Referral.find({"status": "completed"}).to_list()
-    total_revenue = sum(r.payment.get("platform_fee", 40) for r in completed_refs)
+    total_revenue = completed_referrals * 40  # ₹40 platform fee per referral
     
     # Get recent activity (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    recent_referrals = await Referral.find(
-        Referral.created_at >= thirty_days_ago
-    ).count()
+    recent_referrals = sum(1 for r in all_referrals if r.created_at >= thirty_days_ago)
+    
+    # Get all wallets for total ecosystem value
+    all_wallets = await Wallet.find_all().to_list()
+    total_wallet_balance = sum(w.balance for w in all_wallets)
+    total_earned = sum(w.total_earned for w in all_wallets)
+    total_withdrawn = sum(w.total_withdrawn for w in all_wallets)
+    
+    # Get pending payouts
+    from app.models.wallet import PayoutRequest, PayoutStatus
+    pending_payouts = await PayoutRequest.find(
+        PayoutRequest.status == PayoutStatus.PENDING
+    ).to_list()
+    pending_payout_amount = sum(p.amount for p in pending_payouts)
     
     # Hospital distribution by city
     all_hospitals = await Hospital.find_all().to_list()
     city_distribution = {}
+    state_distribution = {}
     for hospital in all_hospitals:
         city = hospital.city
+        state = hospital.state
         if city in city_distribution:
             city_distribution[city] += 1
         else:
             city_distribution[city] = 1
+        if state in state_distribution:
+            state_distribution[state] += 1
+        else:
+            state_distribution[state] = 1
+    
+    # Top cities by hospital count
+    top_cities = sorted(city_distribution.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    # Calculate system health metrics
+    avg_occupancy = sum(h.get_occupancy_percentage() for h in all_hospitals) / len(all_hospitals) if all_hospitals else 0
     
     return {
+        "overview": {
+            "total_hospitals": total_hospitals,
+            "verified_hospitals": verified_hospitals,
+            "total_patients": total_patients,
+            "total_referrals": total_referrals
+        },
         "hospitals": {
             "total": total_hospitals,
-            "free": free_hospitals,
-            "paid": paid_hospitals
+            "free_tier": free_hospitals,
+            "paid_tier": paid_hospitals,
+            "verified": verified_hospitals,
+            "average_occupancy": round(avg_occupancy, 2)
         },
         "patients": {
-            "total": total_patients
+            "total": total_patients,
+            "active": total_patients  # Placeholder - add last_login tracking
         },
         "referrals": {
             "total": total_referrals,
             "completed": completed_referrals,
             "pending": pending_referrals,
-            "last_30_days": recent_referrals
+            "last_30_days": recent_referrals,
+            "completion_rate": round((completed_referrals / total_referrals * 100), 2) if total_referrals > 0 else 0
         },
         "revenue": {
             "total_platform_fees": total_revenue,
-            "currency": "INR"
+            "currency": "INR",
+            "average_per_referral": 40
         },
-        "geographic_distribution": city_distribution
+        "wallets": {
+            "total_balance": round(total_wallet_balance, 2),
+            "total_earned": round(total_earned, 2),
+            "total_withdrawn": round(total_withdrawn, 2),
+            "pending_payouts": len(pending_payouts),
+            "pending_payout_amount": round(pending_payout_amount, 2)
+        },
+        "geographic_distribution": {
+            "by_city": dict(top_cities),
+            "by_state": state_distribution,
+            "total_cities": len(city_distribution),
+            "total_states": len(state_distribution)
+        }
     }
 
 
@@ -262,53 +309,161 @@ async def get_all_wallet_transactions(
     return {"transactions": result, "count": len(result)}
 
 
-@router.post("/payouts/{hospital_id}")
-async def process_payout(
-    hospital_id: str,
-    payout_data: dict,
+@router.get("/payouts/pending")
+async def get_pending_payouts(current_user: User = Depends(get_admin_user)):
+    """
+    Get all pending payout requests
+    """
+    try:
+        from app.models.wallet import PayoutRequest, PayoutStatus
+        
+        pending_payouts = await PayoutRequest.find(
+            PayoutRequest.status == PayoutStatus.PENDING
+        ).sort("-requested_at").to_list()
+        
+        result = []
+        for payout in pending_payouts:
+            hospital = await Hospital.get(payout.hospital_id)
+            wallet = await Wallet.find_one(Wallet.hospital_id == payout.hospital_id)
+            
+            result.append({
+                "id": str(payout.id),
+                "hospital_id": str(payout.hospital_id),
+                "hospital_name": hospital.name if hospital else "Unknown",
+                "amount": payout.amount,
+                "wallet_balance": wallet.balance if wallet else 0,
+                "account_holder": payout.account_holder_name,
+                "account_number": payout.account_number,
+                "ifsc_code": payout.ifsc_code,
+                "bank_name": payout.bank_name,
+                "requested_at": payout.requested_at.isoformat(),
+                "status": payout.status
+            })
+        
+        return {
+            "pending_payouts": result,
+            "count": len(result),
+            "total_amount": sum(p["amount"] for p in result)
+        }
+        
+    except Exception as e:
+        logger.error(f"Get pending payouts error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.post("/payouts/{payout_id}/approve")
+async def approve_payout(
+    payout_id: str,
+    admin_notes: str = "",
     current_user: User = Depends(get_admin_user)
 ):
     """
-    Process payout for hospital (admin approval required)
+    Approve payout request and process payment
     """
     try:
-        hospital = await Hospital.get(ObjectId(hospital_id))
+        from app.models.wallet import PayoutRequest, PayoutStatus, TransactionType
         
-        if not hospital:
-            raise HTTPException(status_code=404, detail="Hospital not found")
+        payout = await PayoutRequest.get(ObjectId(payout_id))
         
-        wallet = await Wallet.find_one(Wallet.hospital_id == hospital.id)
+        if not payout:
+            raise HTTPException(status_code=404, detail="Payout request not found")
         
-        if not wallet:
-            raise HTTPException(status_code=404, detail="Wallet not found")
+        if payout.status != PayoutStatus.PENDING:
+            raise HTTPException(status_code=400, detail=f"Payout already {payout.status}")
         
-        amount = payout_data["amount"]
+        wallet = await Wallet.find_one(Wallet.hospital_id == payout.hospital_id)
         
-        if amount > wallet.balance:
+        if not wallet or wallet.balance < payout.amount:
             raise HTTPException(status_code=400, detail="Insufficient wallet balance")
         
         # Deduct from wallet
-        await wallet.debit(amount)
+        await wallet.debit(payout.amount)
         
         # Create transaction record
         transaction = WalletTransaction(
             wallet_id=wallet.id,
-            transaction_type="withdrawal",
-            amount=amount,
-            description=f"Payout approved by admin - {payout_data.get('notes', '')}"
+            transaction_type=TransactionType.WITHDRAWAL,
+            amount=payout.amount,
+            description=f"Payout approved - {payout.bank_name} ****{payout.account_number[-4:]}"
         )
         await transaction.insert()
         
-        logger.info(f"Admin processed payout of ₹{amount} for hospital {hospital_id}")
+        # Update payout status
+        payout.status = PayoutStatus.APPROVED
+        payout.processed_at = datetime.utcnow()
+        payout.admin_notes = admin_notes
+        await payout.save()
+        
+        hospital = await Hospital.get(payout.hospital_id)
+        
+        logger.info(f"Admin approved payout {payout_id} of ₹{payout.amount}")
         
         return {
-            "message": "Payout processed",
-            "amount": amount,
-            "remaining_balance": wallet.balance
+            "message": "Payout approved and processed",
+            "payout_id": str(payout.id),
+            "hospital_name": hospital.name if hospital else "Unknown",
+            "amount": payout.amount,
+            "remaining_wallet_balance": wallet.balance
         }
-    
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Approve payout error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.post("/payouts/{payout_id}/reject")
+async def reject_payout(
+    payout_id: str,
+    admin_notes: str,
+    current_user: User = Depends(get_admin_user)
+):
+    """
+    Reject payout request
+    """
+    try:
+        from app.models.wallet import PayoutRequest, PayoutStatus
+        
+        payout = await PayoutRequest.get(ObjectId(payout_id))
+        
+        if not payout:
+            raise HTTPException(status_code=404, detail="Payout request not found")
+        
+        if payout.status != PayoutStatus.PENDING:
+            raise HTTPException(status_code=400, detail=f"Payout already {payout.status}")
+        
+        # Update payout status
+        payout.status = PayoutStatus.REJECTED
+        payout.processed_at = datetime.utcnow()
+        payout.admin_notes = admin_notes
+        await payout.save()
+        
+        hospital = await Hospital.get(payout.hospital_id)
+        
+        logger.info(f"Admin rejected payout {payout_id}")
+        
+        return {
+            "message": "Payout rejected",
+            "payout_id": str(payout.id),
+            "hospital_name": hospital.name if hospital else "Unknown",
+            "reason": admin_notes
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Reject payout error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
 @router.get("/n8n-logs")

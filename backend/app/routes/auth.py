@@ -15,6 +15,9 @@ from app.utils.jwt import create_access_token
 from app.middleware.auth import get_current_user
 from datetime import datetime
 import logging
+from app.database import db
+from app.database import db
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,11 @@ async def register(request: UserRegisterRequest):
     """
     Register a new user (patient, hospital, or admin)
     """
+    if not db.connected:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Database unavailable. Please try again later.")
+    if not db.connected:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database unavailable. Please try again later.")
     # Check if user already exists
     existing_user = await User.find_one(User.email == request.email)
     if existing_user:
@@ -104,6 +112,26 @@ async def login(request: UserLoginRequest):
     """
     Login user and return JWT token
     """
+    if not db.connected:
+        # If demo auth fallback is enabled, allow login without DB
+        if settings.demo_auth_enabled:
+            if request.email == settings.demo_user_email and request.password == settings.demo_user_password:
+                # Return a synthetic token and minimal user info
+                access_token = create_access_token(data={"sub": "demo-user-id", "role": UserRole.PATIENT.value})
+                return AuthResponse(
+                    user=UserResponse(
+                        id="demo-user-id",
+                        email=settings.demo_user_email,
+                        role=UserRole.PATIENT.value,
+                        is_active=True
+                    ),
+                    access_token=access_token
+                )
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Database unavailable. Please try again later.")
+        # Default: service unavailable
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Database unavailable. Please try again later.")
     # Find user by email
     user = await User.find_one(User.email == request.email)
     
@@ -148,14 +176,47 @@ async def login(request: UserLoginRequest):
     )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me")
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """
-    Get current authenticated user information
+    Get current authenticated user information with profile details
     """
-    return UserResponse(
-        id=str(current_user.id),
-        email=current_user.email,
-        role=current_user.role.value,
-        is_active=current_user.is_active
-    )
+    if not db.connected:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Database unavailable. Please try again later.")
+    response = {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "role": current_user.role.value,
+        "is_active": current_user.is_active
+    }
+    
+    if current_user.role == UserRole.PATIENT:
+        patient = await Patient.find_one(Patient.user_id == current_user.id)
+        if patient:
+            response["profile"] = {
+                "full_name": patient.full_name,
+                "phone": patient.phone,
+                "blood_group": patient.blood_group,
+                "date_of_birth": patient.date_of_birth,
+                "address": patient.address,
+                "city": patient.city,
+                "state": patient.state
+            }
+            
+    elif current_user.role == UserRole.HOSPITAL:
+        hospital = await Hospital.find_one(Hospital.user_id == current_user.id)
+        if hospital:
+            response["profile"] = {
+                "id": str(hospital.id),
+                "name": hospital.name,
+                "phone": hospital.phone,
+                "address": hospital.address,
+                "city": hospital.city,
+                "state": hospital.state,
+                "pincode": hospital.pincode,
+                "specializations": hospital.specializations,
+                "subscription": hospital.subscription
+            }
+            
+    return response

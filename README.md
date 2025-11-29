@@ -1,10 +1,15 @@
-# HealthEase - Agentic AI Hospital Management Platform
+# HealthEase - Agentic AI for Predictive Hospital Management
 
-A complete, production-grade hospital management and patient flow platform powered by AI, featuring real-time surge predictions, smart referrals, digital wallets, and workflow automation.
+A centralized, AI-based platform that breaks away from conventional healthcare processes by fusing multi-modal data to create actionable, hyper-local recommendations. This shifts reactive decision-making to proactive readiness.
 
 ## 🌟 Project Overview
 
-HealthEase is a comprehensive healthcare management system with:
+HealthEase is an Agentic AI system designed to optimize hospital operations through three interrelated phases:
+1.  **Predictive Alert Phase**: Applies deep learning to accurately predict spikes in demand.
+2.  **Proactive Preparation Phase**: Employs autonomous AI agents to instantaneously compute and implement best resource re-allocations.
+3.  **Dynamic Response & Optimization Phase**: Offers real-time command center assistance to dynamically respond to emerging events.
+
+The system is built with:
 - **Python FastAPI Backend** - Modern async REST API
 - **React + Vite Frontend** - Fast, responsive UI
 - **MongoDB Database** - Flexible NoSQL storage with geospatial support

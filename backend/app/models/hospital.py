@@ -52,6 +52,8 @@ class Hospital(Document):
         "ventilators": 0,
         "available_ventilators": 0
     })
+    rating: float = 0.0
+    review_count: int = 0
     specializations: List[str] = []
     wallet_id: Optional[ObjectId] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

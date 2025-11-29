@@ -5,6 +5,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 10000,
 });
 
 // Request interceptor - add JWT token
@@ -25,11 +26,22 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Network/timeout errors (no response from server)
+        if (error.code === 'ECONNABORTED' || (!error.response && error.request)) {
+            const networkErr = new Error('Network error: Backend unreachable');
+            networkErr.code = 'NETWORK_ERROR';
+            networkErr.config = error.config;
+            return Promise.reject(networkErr);
+        }
+
         if (error.response?.status === 401) {
             // Unauthorized - clear token and redirect to login
             localStorage.removeItem('access_token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Avoid redirect loop when already on login
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

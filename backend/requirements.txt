@@ -13,3 +13,12 @@ openai
 httpx
 python-dotenv
 email-validator
+
+# ML and Analytics
+scikit-learn
+joblib
+numpy
+pandas
+
+# Automation and Scheduling
+croniter

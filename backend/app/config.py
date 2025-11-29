@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     
     # MongoDB
     mongodb_url: str = "mongodb://localhost:27017/healthease"
+    mongodb_tls_insecure: bool = False  # Dev-only: allow invalid certs/hostnames
     
     # JWT
     jwt_secret_key: str
@@ -17,6 +18,8 @@ class Settings(BaseSettings):
     openai_api_key: str
     razorpay_key_id: str
     razorpay_key_secret: str
+    openweather_api_key: str = "demo"  # Get free key from openweathermap.org
+    google_maps_api_key: str = ""  # Get from Google Cloud Console
     
     # SMTP
     smtp_host: str = "smtp.gmail.com"
@@ -35,6 +38,11 @@ class Settings(BaseSettings):
     platform_fee: int = 40
     patient_referral_fee: int = 150
     hospital_share: int = 110
+
+    # Demo auth fallback (for degraded mode without DB)
+    demo_auth_enabled: bool = False
+    demo_user_email: str = "demo@healthease.local"
+    demo_user_password: str = "demo1234"
     
     @property
     def cors_origins_list(self) -> List[str]:

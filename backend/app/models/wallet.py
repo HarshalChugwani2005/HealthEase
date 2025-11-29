@@ -11,6 +11,15 @@ class TransactionType(str, Enum):
     CREDIT = "credit"
     DEBIT = "debit"
     WITHDRAWAL = "withdrawal"
+    REFERRAL_EARNING = "referral_earning"
+
+
+class PayoutStatus(str, Enum):
+    """Payout request status"""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    PROCESSING = "processing"
 
 
 class Wallet(Document):
@@ -72,11 +81,53 @@ class WalletTransaction(Document):
             [("wallet_id", 1), ("created_at", -1)]
         ]
     
+    @property
+    def balance_after(self) -> float:
+        """Calculate balance after transaction"""
+        # This should be set during transaction creation
+        return 0.0  # Placeholder
+    
     class Config:
         json_schema_extra = {
             "example": {
                 "transaction_type": "credit",
                 "amount": 55.0,
                 "description": "Referral payment from Hospital A to Hospital B"
+            }
+        }
+
+
+class PayoutRequest(Document):
+    """Payout request model for hospitals"""
+    wallet_id: ObjectId = Field(index=True)
+    hospital_id: ObjectId = Field(index=True)
+    amount: float
+    account_holder_name: str
+    account_number: str
+    ifsc_code: str
+    bank_name: str
+    status: PayoutStatus = PayoutStatus.PENDING
+    requested_at: datetime = Field(default_factory=datetime.utcnow)
+    processed_at: Optional[datetime] = None
+    admin_notes: Optional[str] = None
+    
+    class Settings:
+        name = "payout_requests"
+        indexes = [
+            "wallet_id",
+            "hospital_id",
+            "status",
+            "requested_at"
+        ]
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "amount": 5000.0,
+                "account_holder_name": "City Hospital",
+                "account_number": "1234567890",
+                "ifsc_code": "HDFC0001234",
+                "bank_name": "HDFC Bank",
+                "status": "pending"
             }
         }

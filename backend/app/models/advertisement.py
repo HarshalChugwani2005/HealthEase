@@ -3,6 +3,14 @@ from pydantic import Field
 from typing import Optional
 from datetime import datetime
 from beanie import PydanticObjectId as ObjectId
+from enum import Enum
+
+
+class AdStatus(str, Enum):
+    """Advertisement status"""
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class AdvertisementMetrics(dict):
@@ -18,13 +26,17 @@ class Advertisement(Document):
     description: str
     image_url: Optional[str] = None
     link_url: Optional[str] = None
+    target_audience: str = "all"  # all, city, state
     is_active: bool = True
+    status: AdStatus = AdStatus.PENDING_REVIEW
+    impressions: int = 0
+    clicks: int = 0
     metrics: dict = Field(default_factory=lambda: {
         "impressions_count": 0,
         "clicks_count": 0
     })
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
     
     class Settings:
         name = "advertisements"

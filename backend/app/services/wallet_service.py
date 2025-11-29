@@ -34,8 +34,9 @@ class WalletService:
     async def credit_wallet(
         hospital_id: ObjectId,
         amount: float,
+        transaction_type: TransactionType,
         description: str,
-        referral_id: Optional[ObjectId] = None
+        referral_id: Optional[str] = None
     ) -> WalletTransaction:
         """
         Credit amount to hospital wallet
@@ -43,8 +44,9 @@ class WalletService:
         Args:
             hospital_id: Hospital ObjectId
             amount: Amount to credit
+            transaction_type: Type of transaction
             description: Transaction description
-            referral_id: Optional referral ID
+            referral_id: Optional referral ID string
             
         Returns:
             WalletTransaction object
@@ -55,8 +57,8 @@ class WalletService:
         # Create transaction record
         transaction = WalletTransaction(
             wallet_id=wallet.id,
-            referral_id=referral_id,
-            transaction_type=TransactionType.CREDIT,
+            referral_id=ObjectId(referral_id) if referral_id else None,
+            transaction_type=transaction_type,
             amount=amount,
             description=description
         )
@@ -134,3 +136,7 @@ class WalletService:
             f"Processed referral payment: From Hospital ₹{from_hospital_share}, "
             f"To Hospital ₹{to_hospital_share}"
         )
+
+
+# Global wallet service instance
+wallet_service = WalletService()

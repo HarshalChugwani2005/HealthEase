@@ -30,11 +30,11 @@ const LandingPage = () => {
 
                 <div className="relative container mx-auto px-4 py-20 text-center">
                     <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-                        AI-Powered Hospital<br />Management Platform
+                        Agentic AI for Predictive<br />Hospital Management
                     </h2>
-                    <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-                        Intelligent patient flow management with real-time surge predictions,
-                        smart referrals, and seamless digital payments
+                    <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
+                        Shifting Reactive Care to Proactive Readiness. A centralized, AI-based platform 
+                        fusing multi-modal data for hyper-local recommendations and autonomous resource optimization.
                     </p>
                     <div className="flex justify-center gap-4">
                         <Link to="/register">
@@ -54,7 +54,7 @@ const LandingPage = () => {
             {/* Features Section */}
             <div id="features" className="container mx-auto px-4 py-20">
                 <h3 className="text-3xl font-bold text-center mb-12">
-                    Powerful Features for Modern Healthcare
+                    Three Phases of Continuous Optimization
                 </h3>
 
                 <div className="grid md:grid-cols-3 gap-8">
@@ -63,10 +63,10 @@ const LandingPage = () => {
                         <div className="w-12 h-12 bg-hospital-primary/10 rounded-lg flex items-center justify-center mb-4">
                             <Zap className="w-6 h-6 text-hospital-primary" />
                         </div>
-                        <h4 className="text-xl font-bold mb-3">AI Surge Predictions</h4>
+                        <h4 className="text-xl font-bold mb-3">Predictive Alert Phase</h4>
                         <p className="text-gray-600">
-                            Predict patient surges using multimodal data including weather, festivals,
-                            pollution, and historical trends
+                            Applies deep learning to accurately predict spikes in demand (staffing, bed capacity, inventory)
+                            using multi-modal data sources.
                         </p>
                     </div>
 
@@ -75,10 +75,10 @@ const LandingPage = () => {
                         <div className="w-12 h-12 bg-patient-primary/10 rounded-lg flex items-center justify-center mb-4">
                             <Building2 className="w-6 h-6 text-patient-primary" />
                         </div>
-                        <h4 className="text-xl font-bold mb-3">Smart Referrals</h4>
+                        <h4 className="text-xl font-bold mb-3">Proactive Preparation</h4>
                         <p className="text-gray-600">
-                            Automatically redirect patients to available hospitals with real-time
-                            capacity monitoring and load probability
+                            Employs autonomous AI agents to instantaneously compute and implement 
+                            best resource re-allocations before surges occur.
                         </p>
                     </div>
 
@@ -87,10 +87,10 @@ const LandingPage = () => {
                         <div className="w-12 h-12 bg-admin-accent/10 rounded-lg flex items-center justify-center mb-4">
                             <Shield className="w-6 h-6 text-admin-accent" />
                         </div>
-                        <h4 className="text-xl font-bold mb-3">Digital Wallet</h4>
+                        <h4 className="text-xl font-bold mb-3">Dynamic Response</h4>
                         <p className="text-gray-600">
-                            Platform-managed wallet system for transparent revenue sharing
-                            between hospitals
+                            Real-time command center assistance to dynamically respond to emerging events,
+                            reducing waste and optimizing patient outcomes.
                         </p>
                     </div>
 

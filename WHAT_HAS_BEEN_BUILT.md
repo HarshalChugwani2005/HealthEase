@@ -27,8 +27,9 @@ I've created a **complete, production-ready** Agentic AI Hospital Management & P
 10. Advertisements - Hospital promotion system
 11. Capacity Logs - Time-series data with TTL
 12. Workflow Logs - n8n automation tracking
+13. Reviews - Patient feedback and rating system
 
-### 25+ API Endpoints Across 4 Routers
+### 30+ API Endpoints Across 5 Routers
 
 **Authentication Routes** (`/api/auth`):
 - Registration with automatic profile creation
@@ -44,10 +45,31 @@ I've created a **complete, production-ready** Agentic AI Hospital Management & P
 - Inventory CRUD operations
 - Referral management (accept/reject)
 - Wallet balance and transactions
+- **Agentic Action Execution** (Autonomous resource management)
 
 **Patient Routes** (`/api/patients`):
 - Profile management
 - **Hospital search with load probability** calculation
+- **Real-time Alerts** (Health advisories)
+- **Review System** (Rate and review hospitals)
+- **AI Health Assistant** (Chatbot for symptom checking and guidance)
+- **Appointment Booking** (Schedule in-person and telemedicine visits)
+
+**Review Routes** (`/api/reviews`):
+- Submit reviews
+- Get hospital reviews
+
+**Chat Routes** (`/api/chat`):
+- AI Chatbot message endpoint
+
+**Notification Routes** (`/api/notifications`):
+- Real-time push notifications
+- Mark as read/delete notifications
+
+**Appointment Routes** (`/api/appointments`):
+- Book appointments (in-person/telemedicine)
+- View patient appointments
+- Hospital appointment management
 - **Referral creation** with Razorpay order
 - **Payment confirmation** with signature verification
 - Health alerts (pollution/epidemic/festival)
@@ -107,6 +129,8 @@ I've created a **complete, production-ready** Agentic AI Hospital Management & P
 - **Button** - Multi-variant with loading states
 - **Card** - With header, title, content subcomponents
 - **Navbar** - Role-based navigation with themed colors
+- **NotificationCenter** - Real-time push notifications with badge counts
+- **AppointmentBooking** - Appointment scheduling interface
 - **Custom CSS** - Gradients, animations, scrollbar
 
 ### Complete Pages
@@ -126,7 +150,7 @@ I've created a **complete, production-ready** Agentic AI Hospital Management & P
 3. **App.jsx** - Complete routing structure:
    - Public routes (/, /login, /register)
    - Protected hospital routes (dashboard, inventory, referrals, wallet)
-   - Protected patient routes (search, referral, alerts, profile)
+   - Protected patient routes (search, referral, alerts, profile, appointments)
    - Protected admin routes (hospitals, analytics)
 
 ### State Management

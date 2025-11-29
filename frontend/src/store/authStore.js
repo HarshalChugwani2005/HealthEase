@@ -18,7 +18,6 @@ export const useAuthStore = create(
                     const response = await api.post('/api/auth/login', { email, password });
                     const { user, access_token } = response.data;
 
-                    // Store token in localStorage
                     localStorage.setItem('access_token', access_token);
 
                     set({
@@ -31,14 +30,24 @@ export const useAuthStore = create(
                     return { success: true, role: user.role };
                 } catch (error) {
                     let errorMessage = 'Login failed';
-                    if (error.response?.data?.detail) {
-                        const detail = error.response.data.detail;
-                        if (Array.isArray(detail)) {
-                            errorMessage = detail.map(err => err.msg || err).join(', ');
-                        } else if (typeof detail === 'object') {
-                            errorMessage = JSON.stringify(detail);
-                        } else {
+                    // Network/timeout
+                    if (error.code === 'NETWORK_ERROR') {
+                        errorMessage = `Cannot reach backend at ${import.meta.env.VITE_API_URL || 'http://localhost:8000'}`;
+                    } else if (error.response) {
+                        const status = error.response.status;
+                        const detail = error.response.data?.detail;
+                        if (status === 401) {
+                            errorMessage = 'Invalid email or password';
+                        } else if (status === 403) {
+                            errorMessage = 'Account is inactive or forbidden';
+                        } else if (status === 503) {
+                            errorMessage = 'Service temporarily unavailable (database)';
+                        } else if (status === 422) {
+                            errorMessage = 'Invalid input. Please verify your email/password.';
+                        } else if (typeof detail === 'string') {
                             errorMessage = detail;
+                        } else if (detail) {
+                            errorMessage = JSON.stringify(detail);
                         }
                     }
                     set({ error: errorMessage, isLoading: false });
@@ -70,14 +79,17 @@ export const useAuthStore = create(
                     return { success: true, role: user.role };
                 } catch (error) {
                     let errorMessage = 'Registration failed';
-                    if (error.response?.data?.detail) {
-                        const detail = error.response.data.detail;
-                        if (Array.isArray(detail)) {
-                            errorMessage = detail.map(err => err.msg || err).join(', ');
-                        } else if (typeof detail === 'object') {
-                            errorMessage = JSON.stringify(detail);
-                        } else {
+                    if (error.code === 'NETWORK_ERROR') {
+                        errorMessage = `Cannot reach backend at ${import.meta.env.VITE_API_URL || 'http://localhost:8000'}`;
+                    } else if (error.response) {
+                        const status = error.response.status;
+                        const detail = error.response.data?.detail;
+                        if (status === 503) {
+                            errorMessage = 'Service temporarily unavailable (database)';
+                        } else if (typeof detail === 'string') {
                             errorMessage = detail;
+                        } else if (detail) {
+                            errorMessage = JSON.stringify(detail);
                         }
                     }
                     set({ error: errorMessage, isLoading: false });

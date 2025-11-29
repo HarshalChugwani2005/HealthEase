@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { ChatBot } from './components/ui/ChatBot';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -10,18 +11,22 @@ import Register from './pages/Register';
 // Hospital Pages
 import HospitalDashboard from './pages/hospital/Dashboard';
 import Inventory from './pages/hospital/Inventory';
+import Capacity from './pages/hospital/Capacity';
 import Referrals from './pages/hospital/Referrals';
 import Wallet from './pages/hospital/Wallet';
 
 // Patient Pages
+import PatientDashboard from './pages/patient/Dashboard';
 import HospitalSearch from './pages/patient/Search';
 import ReferralFlow from './pages/patient/Referral';
 import PatientAlerts from './pages/patient/Alerts';
 import PatientProfile from './pages/patient/Profile';
+import PatientAppointments from './pages/patient/Appointments';
 
 // Admin Pages
 import AdminHospitals from './pages/admin/Hospitals';
 import AdminAnalytics from './pages/admin/Analytics';
+import AdminDashboard from './pages/admin/Dashboard';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -39,7 +44,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 function App() {
-    const { fetchUser, isAuthenticated } = useAuthStore();
+    const { fetchUser, isAuthenticated, user } = useAuthStore();
 
     useEffect(() => {
         // Fetch user on app load if token exists
@@ -50,6 +55,7 @@ function App() {
 
     return (
         <BrowserRouter>
+            {isAuthenticated && user?.role === 'patient' && <ChatBot />}
             <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
@@ -74,6 +80,14 @@ function App() {
                     }
                 />
                 <Route
+                    path="/hospital/capacity"
+                    element={
+                        <ProtectedRoute allowedRoles={['hospital']}>
+                            <Capacity />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
                     path="/hospital/referrals"
                     element={
                         <ProtectedRoute allowedRoles={['hospital']}>
@@ -91,6 +105,14 @@ function App() {
                 />
 
                 {/* Patient Routes */}
+                <Route
+                    path="/patient/dashboard"
+                    element={
+                        <ProtectedRoute allowedRoles={['patient']}>
+                            <PatientDashboard />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="/patient/search"
                     element={
@@ -123,8 +145,24 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="/patient/appointments"
+                    element={
+                        <ProtectedRoute allowedRoles={['patient']}>
+                            <PatientAppointments />
+                        </ProtectedRoute>
+                    }
+                />
 
                 {/* Admin Routes */}
+                <Route
+                    path="/admin/dashboard"
+                    element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <AdminDashboard />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="/admin/hospitals"
                     element={

@@ -17,6 +17,49 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
 
 
+@router.post("/execute-action")
+async def execute_agentic_action(
+    action_data: dict,
+    current_user: User = Depends(get_hospital_user)
+):
+    """
+    Execute an autonomous agentic action
+    """
+    try:
+        hospital = await Hospital.find_one(Hospital.user_id == current_user.id)
+        if not hospital:
+            raise HTTPException(status_code=404, detail="Hospital profile not found")
+
+        action_type = action_data.get("type")
+        details = action_data.get("details", {})
+        
+        logger.info(f"Executing agentic action: {action_type} for hospital {hospital.id}")
+        
+        if "capacity" in action_type.lower() or "bed" in action_type.lower():
+            # Simulate capacity update
+            # In a real agent, this would parse the natural language instruction
+            # For now, we'll just increment available beds if the action implies increasing capacity
+            if "increase" in action_type.lower() or "add" in action_type.lower():
+                hospital.capacity["available_beds"] += 5
+                hospital.capacity["total_beds"] += 5
+                await hospital.save()
+                return {"status": "success", "message": "Capacity increased by 5 beds", "new_capacity": hospital.capacity}
+                
+        elif "inventory" in action_type.lower() or "order" in action_type.lower():
+            # Simulate inventory order
+            return {"status": "success", "message": "Inventory order placed successfully", "order_id": f"ORD-{datetime.utcnow().strftime('%Y%m%d%H%M')}"}
+            
+        elif "staff" in action_type.lower():
+            # Simulate staffing alert
+            return {"status": "success", "message": "Staffing alert sent to HR department"}
+            
+        return {"status": "success", "message": f"Action '{action_type}' executed successfully"}
+        
+    except Exception as e:
+        logger.error(f"Agentic action error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("")
 async def list_hospitals(
     city: Optional[str] = None,
